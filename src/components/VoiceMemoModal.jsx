@@ -14,6 +14,9 @@ import { colors, typography, spacing, preset } from "../theme";
 
 import { useRecord } from "../context/RecordContext";
 
+import { uploadMedia } from "../api/media";
+import { createRecord } from "../api/records";
+
 const BAR_COUNT = 26;
 
 export default function VoiceMemoModal({ visible, onClose, onSave }) {
@@ -29,7 +32,7 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
 
   const { addRecord } = useRecord();
 
-  // 슬라이드 애니메이션 — visible 바뀔 때마다 실행
+  // 모달 슬라이드 애니메이션
   useEffect(() => {
     if (visible) {
       Animated.timing(slideAnim, {
@@ -150,12 +153,40 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
     if (isRecording) {
       uri = await stopRecording();
     }
-    addRecord({
-      content: uri ? "음성 기록" : "",
-      type: "voice",
-      date: currentDate,
-      uri: uri,
-    });
+
+    try {
+      if (uri) {
+        // 음성 파일 업로드 + STT 변환
+        const mediaResult = await uploadMedia(uri);
+        // STT 변환된 텍스트로 기록 생성
+        await createRecord(
+          mediaResult.transcribedText,
+          "VOICE",
+          mediaResult.fileUrl,
+        );
+        addRecord({
+          content: mediaResult.transcribedText || "음성 기록",
+          type: "voice",
+          date: currentDate,
+          uri: mediaResult.fileUrl,
+        });
+      } else {
+        addRecord({
+          content: "음성 기록",
+          type: "voice",
+          date: currentDate,
+          uri: null,
+        });
+      }
+    } catch (e) {
+      console.log("음성 업로드 실패");
+      addRecord({
+        content: "음성 기록",
+        type: "voice",
+        date: currentDate,
+        uri: uri,
+      });
+    }
     onClose();
   };
 

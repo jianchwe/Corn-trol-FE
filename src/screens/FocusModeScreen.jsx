@@ -18,6 +18,9 @@ import { colors, typography, spacing, preset } from "../theme";
 import { mockMindMapData } from "../data/mockData";
 import { useUser } from "../context/UserContext";
 
+import { startFocus, endFocus, getQuestions } from "../api/focus";
+import { getMindMap } from "../api/records";
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -47,12 +50,46 @@ export default function FocusModeScreen() {
   const { incrementFocusCount } = useUser();
   const [timerCompleted, setTimerCompleted] = useState(false);
 
+  const [sessionId, setSessionId] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [mindMapData, setMindMapData] = useState([]);
+
   // 알림 권한 요청
   useEffect(() => {
     async function requestPermissions() {
       await Notifications.requestPermissionsAsync();
     }
     requestPermissions();
+  }, []);
+
+  useEffect(() => {
+    const fetchMindMap = async () => {
+      try {
+        const data = await getMindMap();
+        if (data?.nodes?.length > 0) {
+          const grouped = data.nodes.reduce((acc, node) => {
+            const existing = acc.find((g) => g.keyword === node.keyword);
+            if (existing) {
+              existing.records.push({
+                id: node.recordId,
+                content: node.keyword,
+              });
+            } else {
+              acc.push({
+                keyword: node.keyword,
+                records: [{ id: node.recordId, content: node.keyword }],
+              });
+            }
+            return acc;
+          }, []);
+          setMindMapData(grouped);
+        }
+      } catch (e) {
+        console.log("마인드맵 로드 실패");
+      }
+    };
+    fetchMindMap();
   }, []);
 
   // 앱 포그라운드/백그라운드 감지
@@ -127,6 +164,10 @@ export default function FocusModeScreen() {
   useEffect(() => {
     if (timerCompleted) {
       incrementFocusCount();
+      if (sessionId) {
+        endFocus(sessionId).catch(() => console.log("집중 모드 종료 API 실패"));
+        setSessionId(null);
+      }
       setTimerCompleted(false);
     }
   }, [timerCompleted]);
@@ -180,7 +221,7 @@ export default function FocusModeScreen() {
     setIsRunning((prev) => !prev);
   };
 
-  const handleSetTime = () => {
+  const handleSetTime = async () => {
     const minutes = parseInt(inputMinutes);
     if (isNaN(minutes) || minutes <= 0) return;
     const seconds = minutes * 60;
@@ -191,8 +232,21 @@ export default function FocusModeScreen() {
     cancelNotification();
     setTimeModalVisible(false);
     setInputMinutes("");
-  };
 
+    // 알곡 식히기 시작 API
+    try {
+      const id = await startFocus(selectedRecord?.records?.[0]?.id, minutes);
+      setSessionId(id);
+      // 질문 조회
+      if (selectedRecord?.records?.[0]?.id) {
+        const q = await getQuestions(selectedRecord.records[0].id);
+        setQuestions(q);
+        setQuestionIndex(0);
+      }
+    } catch (e) {
+      console.log("알곡 식히기 시작 API 실패");
+    }
+  };
   const formatTime = (seconds) => {
     const m = String(Math.floor(seconds / 60)).padStart(2, "0");
     const s = String(seconds % 60).padStart(2, "0");
@@ -219,7 +273,9 @@ export default function FocusModeScreen() {
             onPress={() => setRecordModalVisible(true)}
           >
             <Text style={styles.questionText}>
-              이 아이디어의 핵심은 무엇인가요?{"\n"}(API 연결 필요)
+              {questions.length > 0
+                ? questions[questionIndex]?.content
+                : "기록을 선택하면 AI 질문이 생성돼요"}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -295,28 +351,30 @@ export default function FocusModeScreen() {
                 style={{ maxHeight: 290 }}
                 showsVerticalScrollIndicator={false}
               >
-                {mockMindMapData.map((item) => (
-                  <TouchableOpacity
-                    key={item.keyword}
-                    style={[
-                      styles.recordItem,
-                      selectedRecord?.keyword === item.keyword &&
-                        styles.recordItemSelected,
-                    ]}
-                    onPress={() => {
-                      if (selectedRecord?.keyword === item.keyword) {
-                        setSelectedRecord(null);
-                      } else {
-                        setSelectedRecord(item);
-                      }
-                      setRecordModalVisible(false);
-                    }}
-                  >
-                    <Text style={styles.recordItemText} numberOfLines={2}>
-                      {item.keyword}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {(mindMapData.length > 0 ? mindMapData : mockMindMapData).map(
+                  (item) => (
+                    <TouchableOpacity
+                      key={item.keyword}
+                      style={[
+                        styles.recordItem,
+                        selectedRecord?.keyword === item.keyword &&
+                          styles.recordItemSelected,
+                      ]}
+                      onPress={() => {
+                        if (selectedRecord?.keyword === item.keyword) {
+                          setSelectedRecord(null);
+                        } else {
+                          setSelectedRecord(item);
+                        }
+                        setRecordModalVisible(false);
+                      }}
+                    >
+                      <Text style={styles.recordItemText} numberOfLines={2}>
+                        {item.keyword}
+                      </Text>
+                    </TouchableOpacity>
+                  ),
+                )}
               </ScrollView>
             </View>
           </TouchableOpacity>

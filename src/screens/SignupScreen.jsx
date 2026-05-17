@@ -18,7 +18,7 @@ export default function SignupScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
-  const [isEmailSent, setIsEmailSent] = useState(true); //deflut = false, 인증번호란 확인용
+  const [isEmailSent, setIsEmailSent] = useState(false); //deflut = false, 인증번호란 확인용
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [loading, setLoading] = useState(false);
 

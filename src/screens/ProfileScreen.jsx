@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import { colors, typography, spacing, preset } from "../theme";
 import { useUser } from "../context/UserContext";
 import { useRecord } from "../context/RecordContext";
 
+import { getMyStats, getMyProfile, updateMyProfile } from "../api/user";
+
 const PROFILE_OPTIONS = ["🌱", "🪴", "🌽", "🍿"];
 
 export default function ProfileScreen() {
@@ -23,11 +25,34 @@ export default function ProfileScreen() {
 
   const { records } = useRecord();
 
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [statsData, profileData] = await Promise.all([
+          getMyStats(),
+          getMyProfile(),
+        ]);
+        setStats(statsData);
+        setNickname(profileData.nickname);
+      } catch (e) {
+        console.log("통계 로드 실패");
+      }
+    };
+    fetchStats();
+  }, []);
+
   const popcornCount = records.length;
 
   // 닉네임 설정
-  const handleNicknameSave = () => {
+  const handleNicknameSave = async () => {
     if (inputNickname.trim() === "") return;
+    try {
+      await updateMyProfile(inputNickname.trim());
+    } catch (e) {
+      console.log("닉네임 변경 API 실패");
+    }
     setNickname(inputNickname.trim());
     setInputNickname("");
     setNicknameModalVisible(false);
@@ -61,13 +86,24 @@ export default function ProfileScreen() {
             {/* 통계 */}
             <View style={styles.records}>
               <View style={styles.recordItem}>
-                <Text style={styles.recordsScore}>{popcornCount}</Text>
+                <Text style={styles.recordsScore}>
+                  {stats ? stats.totalRecords : popcornCount}
+                </Text>
                 <Text style={styles.recordsText}>팝콘 갯수</Text>
               </View>
               <View style={styles.line} />
               <View style={styles.recordItem}>
-                <Text style={styles.recordsScore}>{focusCount}</Text>
+                <Text style={styles.recordsScore}>
+                  {stats ? stats.totalFocusTime : focusCount}
+                </Text>
                 <Text style={styles.recordsText}>알곡 식히기 횟수</Text>
+              </View>
+              <View style={styles.line} />
+              <View style={styles.recordItem}>
+                <Text style={styles.recordsScore}>
+                  {stats ? stats.totalConnections : 0}
+                </Text>
+                <Text style={styles.recordsText}>생각줄기</Text>
               </View>
             </View>
           </View>
@@ -192,7 +228,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   records: {
-    width: 270,
+    width: 310,
     height: 105,
     borderRadius: 16,
     backgroundColor: "#FFFFFF",

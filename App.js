@@ -66,7 +66,7 @@ function TabNavigator() {
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // defult = false, 로그인 확인용
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // defult = false, 로그인 확인용
 
   useEffect(() => {
     async function init() {
@@ -76,8 +76,8 @@ export default function App() {
         "Pretendard-SemiBold": require("./assets/fonts/Pretendard-SemiBold.ttf"),
         "Pretendard-Bold": require("./assets/fonts/Pretendard-Bold.ttf"),
       });
-      //const token = await AsyncStorage.getItem("accessToken");  //로그인 확인용
-      //setIsLoggedIn(!!token); // 로그인 확인용
+      const token = await AsyncStorage.getItem("accessToken"); //로그인 확인용
+      setIsLoggedIn(!!token); // 로그인 확인용
       setFontsLoaded(true);
     }
     init();

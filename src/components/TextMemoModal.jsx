@@ -15,6 +15,8 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { colors, typography, spacing, preset } from "../theme";
 import { useRecord } from "../context/RecordContext";
 
+import { createRecord } from "../api/records";
+
 export default function TextMemoModal({ visible, onClose, onSave }) {
   const [content, setContent] = useState("");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -43,18 +45,30 @@ export default function TextMemoModal({ visible, onClose, onSave }) {
     return `${y}.${m}.${d}`;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (content.trim() === "") {
       Alert.alert("", "내용을 입력해주세요.");
       return;
     }
-    addRecord({
-      content: content,
-      type: "text",
-      date: currentDate,
-    });
-    setContent("");
-    onClose();
+    try {
+      await createRecord(content, "TEXT");
+      addRecord({
+        content: content,
+        type: "text",
+        date: currentDate,
+      });
+      setContent("");
+      onClose();
+    } catch (e) {
+      // 서버 연결 X -> 로컬에만 저장
+      addRecord({
+        content: content,
+        type: "text",
+        date: currentDate,
+      });
+      setContent("");
+      onClose();
+    }
   };
 
   return (
@@ -118,17 +132,17 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.3)", // 여기로 이동
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject, // 절대위치로 전체 화면 덮기
+    ...StyleSheet.absoluteFillObject, // 절대위치 전체 화면
   },
   sheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 36,
     borderTopRightRadius: 36,
-    borderBottomLeftRadius: 0, // 추가
-    borderBottomRightRadius: 0, // 추가
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     padding: spacing.xl,
     paddingBottom: 40,
   },

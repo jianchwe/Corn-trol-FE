@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -21,16 +21,23 @@ import { colors, typography, spacing, preset } from "../theme";
 
 import MindMapView from "../components/MindMapView";
 import RecordCard from "../components/RecordCard";
-import { mockMindMapData, mockKeywords, mockRecords } from "../data/mockData";
 import React from "react";
 import { useRecord } from "../context/RecordContext";
+
+import {
+  getRecords,
+  updateRecord,
+  deleteRecord as deleteRecordApi,
+  searchRecords,
+} from "../api/records";
+import { getMindMap } from "../api/records";
 
 export default function AlgokScreen() {
   const [activeTab, setActiveTab] = useState("latest");
   const [searchText, setSearchText] = useState("");
   const [keywordIndex, setKeywordIndex] = useState(0);
 
-  const { groupedRecords, deleteRecord } = useRecord();
+  const { groupedRecords, deleteRecord, setRecords } = useRecord();
   const [selectedKeyword, setSelectedKeyword] = useState(null);
 
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -38,6 +45,57 @@ export default function AlgokScreen() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editContent, setEditContent] = useState("");
   const [editingId, setEditingId] = useState(null);
+
+  const [mindMapData, setMindMapData] = useState([]);
+  const [mindMapKeywords, setMindMapKeywords] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const mindmap = await getMindMap();
+        if (mindmap?.nodes?.length > 0) {
+          // 마인드맵 구성
+          const grouped = mindmap.nodes.reduce((acc, node) => {
+            const existing = acc.find((g) => g.keyword === node.keyword);
+            if (existing) {
+              existing.records.push({
+                id: node.recordId,
+                content: node.keyword,
+              });
+            } else {
+              acc.push({
+                keyword: node.keyword,
+                records: [{ id: node.recordId, content: node.keyword }],
+              });
+            }
+            return acc;
+          }, []);
+          setMindMapData(grouped);
+          setMindMapKeywords(grouped.map((g) => g.keyword));
+        }
+      } catch (e) {
+        console.log("마인드맵 로드 실패");
+      }
+
+      try {
+        const data = await getRecords();
+        if (data?.content?.length > 0) {
+          setRecords(
+            data.content.map((r) => ({
+              id: r.recordId,
+              content: r.content,
+              type: r.type,
+              date: new Date(r.createdAt),
+              uri: r.audioUrl,
+            })),
+          );
+        }
+      } catch (e) {
+        console.log("기록 목록 로드 실패");
+      }
+    };
+    fetchData();
+  }, []);
 
   const filteredRecords =
     searchText.trim() === ""
@@ -54,7 +112,7 @@ export default function AlgokScreen() {
   const filteredKeywords =
     searchText.trim() === ""
       ? []
-      : mockMindMapData.filter(
+      : mindMapData.filter(
           (item) =>
             item.keyword.includes(searchText) ||
             item.records.some((r) => r.content.includes(searchText)),
@@ -122,7 +180,14 @@ export default function AlgokScreen() {
                     <RecordCard
                       key={item.id}
                       content={item.content}
-                      onDelete={() => deleteRecord(item.id)}
+                      onDelete={async () => {
+                        try {
+                          await deleteRecordApi(item.id);
+                        } catch (e) {
+                          console.log("삭제 API 실패");
+                        }
+                        deleteRecord(item.id);
+                      }}
                       onEdit={() => {
                         setEditingId(item.id);
                         setEditContent(item.content);
@@ -157,8 +222,12 @@ export default function AlgokScreen() {
                     <Text style={styles.modalCancel}>취소</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => {
-                      // API 연결
+                    onPress={async () => {
+                      try {
+                        await updateRecord(editingId, editContent);
+                      } catch (e) {
+                        console.log("수정 API 실패");
+                      }
                       setEditModalVisible(false);
                     }}
                   >
@@ -221,7 +290,7 @@ export default function AlgokScreen() {
                     onPress={() =>
                       setKeywordIndex(
                         keywordIndex === 0
-                          ? mockKeywords.length - 1
+                          ? mindMapKeywords.length - 1
                           : keywordIndex - 1,
                       )
                     }
@@ -233,12 +302,12 @@ export default function AlgokScreen() {
                     />
                   </TouchableOpacity>
                   <Text style={styles.keywordTitle}>
-                    {mockKeywords[keywordIndex]}
+                    {mindMapKeywords[keywordIndex]}
                   </Text>
                   <TouchableOpacity
                     onPress={() =>
                       setKeywordIndex(
-                        keywordIndex === mockKeywords.length - 1
+                        keywordIndex === mindMapKeywords.length - 1
                           ? 0
                           : keywordIndex + 1,
                       )
@@ -253,8 +322,8 @@ export default function AlgokScreen() {
                 </View>
                 <View style={styles.mindmapPlaceholder}>
                   <MindMapView
-                    keyword={mockMindMapData[keywordIndex]?.keyword}
-                    records={mockMindMapData[keywordIndex]?.records || []}
+                    keyword={mindMapData[keywordIndex]?.keyword}
+                    records={mindMapData[keywordIndex]?.records || []}
                   />
                 </View>
               </>

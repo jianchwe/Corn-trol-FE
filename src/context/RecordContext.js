@@ -22,6 +22,11 @@ export function RecordProvider({ children }) {
     setRecords((prev) => prev.filter((r) => r.id !== id));
   };
 
+  // 내보내기
+  <RecordContext.Provider
+    value={{ records, setRecords, groupedRecords, addRecord, deleteRecord }}
+  ></RecordContext.Provider>;
+
   // 날짜별로 그룹화
   const groupedRecords = records
     .reduce((acc, record) => {
