@@ -7,6 +7,9 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import {
   MagnifyingGlass,
@@ -31,6 +34,10 @@ export default function AlgokScreen() {
   const [selectedKeyword, setSelectedKeyword] = useState(null);
 
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [editingId, setEditingId] = useState(null);
 
   const filteredRecords =
     searchText.trim() === ""
@@ -116,6 +123,11 @@ export default function AlgokScreen() {
                       key={item.id}
                       content={item.content}
                       onDelete={() => deleteRecord(item.id)}
+                      onEdit={() => {
+                        setEditingId(item.id);
+                        setEditContent(item.content);
+                        setEditModalVisible(true);
+                      }}
                     />
                   ))}
                 </View>
@@ -123,6 +135,40 @@ export default function AlgokScreen() {
             )}
           </ScrollView>
         )}
+
+        {/* 기록 수정 모달 */}
+        <Modal visible={editModalVisible} transparent animationType="fade">
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalBox}>
+                <Text style={styles.modalTitle}>기록 수정</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={editContent}
+                  onChangeText={setEditContent}
+                  multiline
+                  autoFocus
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                    <Text style={styles.modalCancel}>취소</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      // API 연결
+                      setEditModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.modalConfirm}>저장</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
 
         {/* 키워드 탭 */}
         {activeTab === "keyword" && (
@@ -273,6 +319,49 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: spacing.sm,
     marginTop: spacing.sm,
+    fontFamily: "Pretendard-SemiBold",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 26,
+    padding: spacing.lg,
+    width: "80%",
+    marginTop: 180,
+  },
+  modalTitle: {
+    ...typography.h2,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+    textAlign: "center",
+  },
+  modalInput: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.md,
+    ...typography.body,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+    height: 120,
+    textAlignVertical: "top",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+  },
+  modalCancel: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  modalConfirm: {
+    ...typography.body,
+    color: colors.primary,
     fontFamily: "Pretendard-SemiBold",
   },
   keywordContainer: {

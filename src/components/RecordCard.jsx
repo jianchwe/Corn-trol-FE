@@ -6,24 +6,44 @@ import {
   Animated,
   PanResponder,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { colors, typography, spacing, preset } from "../theme";
 import { Trash } from "phosphor-react-native";
 
-export default function RecordCard({ content, date, onDelete }) {
+export default function RecordCard({ content, date, onDelete, onEdit }) {
   const pan = useRef(new Animated.Value(0)).current;
+  const longPressTimer = useRef(null);
 
   const panResponder = useRef(
     PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) =>
         Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dy) < 10,
       onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: () => {
+        longPressTimer.current = setTimeout(() => {
+          Alert.alert("", "이 기록을 어떻게 할까요?", [
+            { text: "수정", onPress: () => onEdit && onEdit() },
+            {
+              text: "삭제",
+              onPress: () => handleDelete(),
+              style: "destructive",
+            },
+            { text: "취소", style: "cancel" },
+          ]);
+        }, 500);
+      },
       onPanResponderMove: (_, gestureState) => {
+        if (Math.abs(gestureState.dx) > 10) {
+          clearTimeout(longPressTimer.current);
+        }
         if (gestureState.dx < 0) {
           pan.setValue(Math.max(gestureState.dx, -62));
         }
       },
       onPanResponderRelease: (_, gestureState) => {
+        clearTimeout(longPressTimer.current);
         if (gestureState.dx < -50) {
           Animated.spring(pan, {
             toValue: -62,

@@ -1,7 +1,18 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from "react-native";
 import { Svg, Line } from "react-native-svg";
 import { colors, typography, spacing } from "../theme";
+import { X } from "phosphor-react-native";
 
 const WIDTH = 320;
 const HEIGHT = 450;
@@ -14,6 +25,8 @@ const RECT_HEIGHT = 85;
 
 export default function MindMapView({ keyword, records }) {
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editContent, setEditContent] = useState("");
 
   const childPositions = records.map((record, index) => {
     const angle = (2 * Math.PI * index) / records.length - Math.PI / 2;
@@ -87,16 +100,88 @@ export default function MindMapView({ keyword, records }) {
         >
           <TouchableOpacity activeOpacity={1}>
             <View style={styles.modalBox}>
-              <Text style={styles.modalContent}>{selectedRecord?.content}</Text>
               <TouchableOpacity
-                style={styles.modalClose}
+                style={styles.modalCloseX}
                 onPress={() => setSelectedRecord(null)}
               >
-                <Text style={styles.modalCloseText}>닫기</Text>
+                {/* 닫기 */}
+                <X size={16} color={colors.textSecondary} weight="bold" />
               </TouchableOpacity>
+              {selectedRecord?.date && (
+                <Text style={styles.modalDate}>{selectedRecord.date}</Text>
+              )}
+              <Text style={styles.modalContent}>{selectedRecord?.content}</Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalEditButton}
+                  onPress={() => {
+                    setEditContent(selectedRecord.content);
+                    setEditModalVisible(true);
+                    setSelectedRecord(null);
+                  }}
+                >
+                  <Text style={styles.modalEditText}>수정</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalDeleteButton}
+                  onPress={() => {
+                    Alert.alert("", "이 기록을 삭제할까요?", [
+                      {
+                        text: "삭제",
+                        style: "destructive",
+                        onPress: () => {
+                          // API 연결 필요
+                          setSelectedRecord(null);
+                        },
+                      },
+                      { text: "취소", style: "cancel" },
+                    ]);
+                  }}
+                >
+                  <Text style={styles.modalDeleteText}>삭제</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
+      </Modal>
+
+      {/* 수정 모달 */}
+      <Modal visible={editModalVisible} transparent animationType="fade">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalEditTitle}>기록 수정</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={editContent}
+                onChangeText={setEditContent}
+                multiline
+                autoFocus
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalEditButton}
+                  onPress={() => setEditModalVisible(false)}
+                >
+                  <Text style={styles.modalCancelText}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalDeleteButton}
+                  onPress={() => {
+                    // API 연결 필요
+                    setEditModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalSaveText}>저장</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -144,9 +229,9 @@ const styles = StyleSheet.create({
   },
   modalBox: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 26,
     padding: spacing.lg,
-    width: 280,
+    width: "80%",
   },
   modalContent: {
     ...typography.body,
@@ -154,10 +239,70 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     lineHeight: 24,
   },
-  modalClose: {
+  modalCloseX: {
+    position: "absolute",
+    top: spacing.md,
+    right: spacing.md,
+    padding: spacing.xs,
+  },
+  modalCloseXText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+  },
+  modalDate: {
+    ...typography.small,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  modalEditButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: spacing.sm,
     alignItems: "center",
   },
-  modalCloseText: {
+  modalEditText: {
+    ...typography.body,
+    color: colors.primary,
+    fontFamily: "Pretendard-SemiBold",
+  },
+  modalDeleteButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+  },
+  modalDeleteText: {
+    ...typography.body,
+    color: "#FF5252",
+    fontFamily: "Pretendard-SemiBold",
+  },
+  modalEditTitle: {
+    ...typography.h2,
+    color: colors.textPrimary,
+    textAlign: "center",
+    marginBottom: spacing.md,
+  },
+  modalInput: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.md,
+    ...typography.body,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+    height: 120,
+
+    textAlignVertical: "top",
+  },
+  modalCancelText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontFamily: "Pretendard-SemiBold",
+  },
+  modalSaveText: {
     ...typography.body,
     color: colors.primary,
     fontFamily: "Pretendard-SemiBold",
