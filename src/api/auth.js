@@ -40,3 +40,11 @@ export const logout = async () => {
   await AsyncStorage.removeItem("refreshToken");
   await AsyncStorage.removeItem("userId");
 };
+
+// 회원탈퇴
+export const withdraw = async () => {
+  await client.delete("/auth/withdraw");
+  await AsyncStorage.removeItem("accessToken");
+  await AsyncStorage.removeItem("refreshToken");
+  await AsyncStorage.removeItem("userId");
+};

@@ -25,7 +25,7 @@ import client from "./src/api/client";
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-function TabNavigator() {
+function TabNavigator({ onLogout }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -60,7 +60,9 @@ function TabNavigator() {
       <Tab.Screen name="팝콘수집기" component={PopcornScreen} />
       <Tab.Screen name="알곡꿰기" component={AlgokScreen} />
       <Tab.Screen name="알곡식히기" component={FocusModeScreen} />
-      <Tab.Screen name="프로필" component={ProfileScreen} />
+      <Tab.Screen name="프로필">
+        {() => <ProfileScreen onLogout={onLogout} />}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }
@@ -85,9 +87,9 @@ export default function App() {
         "Pretendard-Bold": require("./assets/fonts/Pretendard-Bold.ttf"),
       });
 
-      await AsyncStorage.removeItem("accessToken");
-      await AsyncStorage.removeItem("refreshToken");
-      await AsyncStorage.removeItem("userId");
+      // await AsyncStorage.removeItem("accessToken");
+      // await AsyncStorage.removeItem("refreshToken");
+      // await AsyncStorage.removeItem("userId");
 
       const token = await AsyncStorage.getItem("accessToken"); //로그인 확인용
       setIsLoggedIn(!!token); // 로그인 확인용
@@ -114,7 +116,9 @@ export default function App() {
         <NavigationContainer>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             {isLoggedIn ? (
-              <Stack.Screen name="Main" component={TabNavigator} />
+              <Stack.Screen name="Main">
+                {() => <TabNavigator onLogout={() => setIsLoggedIn(false)} />}
+              </Stack.Screen>
             ) : (
               <>
                 <Stack.Screen name="Login">

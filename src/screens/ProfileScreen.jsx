@@ -7,15 +7,17 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Alert,
 } from "react-native";
 import { colors, typography, spacing, preset } from "../theme";
 import { useUser } from "../context/UserContext";
 
 import { getMyStats, getMyProfile, updateMyProfile } from "../api/user";
+import { logout, withdraw } from "../api/auth";
 
 const PROFILE_OPTIONS = ["🌱", "🪴", "🌽", "🍿"];
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ onLogout }) {
   const { nickname, setNickname, profileEmoji, setProfileEmoji, focusCount } =
     useUser();
   const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
@@ -51,6 +53,42 @@ export default function ProfileScreen() {
     setNickname(inputNickname.trim());
     setInputNickname("");
     setNicknameModalVisible(false);
+  };
+
+  const handleLogout = async () => {
+    Alert.alert("", "로그아웃 할까요?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "로그아웃",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await logout();
+          } catch (e) {
+            console.log("로그아웃 API 실패:", e.message);
+          }
+          onLogout();
+        },
+      },
+    ]);
+  };
+
+  const handleWithdraw = async () => {
+    Alert.alert("", "정말 탈퇴할까요?\n모든 데이터가 삭제돼요.", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "탈퇴",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await withdraw();
+          } catch (e) {
+            console.log("회원탈퇴 API 실패:", e.message);
+          }
+          onLogout();
+        },
+      },
+    ]);
   };
 
   return (
@@ -101,6 +139,14 @@ export default function ProfileScreen() {
                 <Text style={styles.recordsText}>생각줄기</Text>
               </View>
             </View>
+          </View>
+          <View style={styles.bottomButtons}>
+            <TouchableOpacity onPress={handleWithdraw}>
+              <Text style={styles.logoutText}>회원탈퇴</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleLogout}>
+              <Text style={styles.logoutText}>로그아웃</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -317,5 +363,15 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.primary,
     fontWeight: "bold",
+  },
+  bottomButtons: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  logoutText: {
+    ...typography.body,
+    color: colors.textSecondary,
   },
 });

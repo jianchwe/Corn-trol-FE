@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const UserContext = createContext();
 
@@ -6,6 +7,21 @@ export function UserProvider({ children }) {
   const [nickname, setNickname] = useState("새싹");
   const [profileEmoji, setProfileEmoji] = useState("🌱");
   const [focusCount, setFocusCount] = useState(0);
+
+  // 이모지 불러오기
+  useEffect(() => {
+    const loadEmoji = async () => {
+      const saved = await AsyncStorage.getItem("profileEmoji");
+      if (saved) setProfileEmoji(saved);
+    };
+    loadEmoji();
+  }, []);
+
+  // 이모지 저장
+  const handleSetProfileEmoji = (emoji) => {
+    setProfileEmoji(emoji);
+    AsyncStorage.setItem("profileEmoji", emoji);
+  };
 
   const incrementFocusCount = () => setFocusCount((prev) => prev + 1);
 
@@ -15,7 +31,7 @@ export function UserProvider({ children }) {
         nickname,
         setNickname,
         profileEmoji,
-        setProfileEmoji,
+        setProfileEmoji: handleSetProfileEmoji,
         focusCount,
         incrementFocusCount,
       }}
