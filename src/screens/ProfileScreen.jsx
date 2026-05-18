@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { colors, typography, spacing, preset } from "../theme";
 import { useUser } from "../context/UserContext";
-import { useRecord } from "../context/RecordContext";
 
 import { getMyStats, getMyProfile, updateMyProfile } from "../api/user";
 
@@ -22,8 +21,6 @@ export default function ProfileScreen() {
   const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [inputNickname, setInputNickname] = useState("");
-
-  const { records } = useRecord();
 
   const [stats, setStats] = useState(null);
 
@@ -42,8 +39,6 @@ export default function ProfileScreen() {
     };
     fetchStats();
   }, []);
-
-  const popcornCount = records.length;
 
   // 닉네임 설정
   const handleNicknameSave = async () => {
@@ -87,7 +82,7 @@ export default function ProfileScreen() {
             <View style={styles.records}>
               <View style={styles.recordItem}>
                 <Text style={styles.recordsScore}>
-                  {stats ? stats.totalRecords : popcornCount}
+                  {stats ? stats.totalRecords : 0}
                 </Text>
                 <Text style={styles.recordsText}>팝콘 갯수</Text>
               </View>

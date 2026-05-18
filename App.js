@@ -20,6 +20,8 @@ import { RecordProvider } from "./src/context/RecordContext";
 import { Popcorn, Note, Timer, UserCircle } from "phosphor-react-native";
 import { colors } from "./src/theme";
 
+import client from "./src/api/client";
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -69,6 +71,12 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false); // defult = false, 로그인 확인용
 
   useEffect(() => {
+    // 서버 확인용
+    // client
+    //   .get("/auth/email/send")
+    //   .then((res) => console.log("서버 연결 성공:", res.status))
+    //   .catch((e) => console.log("서버 연결 실패:", e.message));
+
     async function init() {
       await Font.loadAsync({
         "Pretendard-Regular": require("./assets/fonts/Pretendard-Regular.ttf"),
@@ -76,6 +84,11 @@ export default function App() {
         "Pretendard-SemiBold": require("./assets/fonts/Pretendard-SemiBold.ttf"),
         "Pretendard-Bold": require("./assets/fonts/Pretendard-Bold.ttf"),
       });
+
+      await AsyncStorage.removeItem("accessToken");
+      await AsyncStorage.removeItem("refreshToken");
+      await AsyncStorage.removeItem("userId");
+
       const token = await AsyncStorage.getItem("accessToken"); //로그인 확인용
       setIsLoggedIn(!!token); // 로그인 확인용
       setFontsLoaded(true);

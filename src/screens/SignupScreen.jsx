@@ -30,10 +30,12 @@ export default function SignupScreen({ navigation }) {
     }
     try {
       setLoading(true);
-      await sendVerificationEmail(email);
+      const result = await sendVerificationEmail(email);
+      console.log("발송 결과:", result);
       setIsEmailSent(true);
       Alert.alert("", "인증번호가 발송되었어요.");
     } catch (e) {
+      console.log("에러:", e.response?.data, e.message);
       Alert.alert("", "이메일 발송에 실패했어요.");
     } finally {
       setLoading(false);
@@ -75,7 +77,10 @@ export default function SignupScreen({ navigation }) {
         { text: "확인", onPress: () => navigation.navigate("Login") },
       ]);
     } catch (e) {
-      Alert.alert("", "회원가입에 실패했어요.");
+      console.log("회원가입 에러:", e.response?.data, e.message);
+      const errorMessage =
+        e.response?.data?.message || "회원가입에 실패했어요.";
+      Alert.alert("", errorMessage);
     } finally {
       setLoading(false);
     }

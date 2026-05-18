@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   CaretRight,
   XCircle,
 } from "phosphor-react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { colors, typography, spacing, preset } from "../theme";
 
 import MindMapView from "../components/MindMapView";
@@ -29,15 +30,16 @@ import {
   updateRecord,
   deleteRecord as deleteRecordApi,
   searchRecords,
+  getMindMap,
 } from "../api/records";
-import { getMindMap } from "../api/records";
 
 export default function AlgokScreen() {
   const [activeTab, setActiveTab] = useState("latest");
   const [searchText, setSearchText] = useState("");
   const [keywordIndex, setKeywordIndex] = useState(0);
 
-  const { groupedRecords, deleteRecord, setRecords } = useRecord();
+  const { groupedRecords, deleteRecord, setRecords, updateRecordLocal } =
+    useRecord();
   const [selectedKeyword, setSelectedKeyword] = useState(null);
 
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -49,53 +51,57 @@ export default function AlgokScreen() {
   const [mindMapData, setMindMapData] = useState([]);
   const [mindMapKeywords, setMindMapKeywords] = useState([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const mindmap = await getMindMap();
-        if (mindmap?.nodes?.length > 0) {
-          // 마인드맵 구성
-          const grouped = mindmap.nodes.reduce((acc, node) => {
-            const existing = acc.find((g) => g.keyword === node.keyword);
-            if (existing) {
-              existing.records.push({
-                id: node.recordId,
-                content: node.keyword,
-              });
-            } else {
-              acc.push({
-                keyword: node.keyword,
-                records: [{ id: node.recordId, content: node.keyword }],
-              });
-            }
-            return acc;
-          }, []);
-          setMindMapData(grouped);
-          setMindMapKeywords(grouped.map((g) => g.keyword));
+  useFocusEffect(
+    useCallback(() => {
+      const fetchData = async () => {
+        try {
+          const mindmap = await getMindMap();
+          console.log("마인드맵 결과:", JSON.stringify(mindmap));
+          if (mindmap?.nodes?.length > 0) {
+            // 마인드맵 구성
+            const grouped = mindmap.nodes.reduce((acc, node) => {
+              const existing = acc.find((g) => g.keyword === node.keyword);
+              if (existing) {
+                existing.records.push({
+                  id: node.recordId,
+                  content: node.keyword,
+                });
+              } else {
+                acc.push({
+                  keyword: node.keyword,
+                  records: [{ id: node.recordId, content: node.keyword }],
+                });
+              }
+              return acc;
+            }, []);
+            setMindMapData(grouped);
+            setMindMapKeywords(grouped.map((g) => g.keyword));
+          }
+        } catch (e) {
+          console.log("마인드맵 로드 실패", e.response?.data, e.message);
         }
-      } catch (e) {
-        console.log("마인드맵 로드 실패");
-      }
 
-      try {
-        const data = await getRecords();
-        if (data?.content?.length > 0) {
-          setRecords(
-            data.content.map((r) => ({
-              id: r.recordId,
-              content: r.content,
-              type: r.type,
-              date: new Date(r.createdAt),
-              uri: r.audioUrl,
-            })),
-          );
+        try {
+          const data = await getRecords();
+          if (data?.content?.length > 0) {
+            setRecords(
+              data.content.map((r) => ({
+                id: r.recordId,
+                content: r.content,
+                type: r.type,
+                date: new Date(r.createdAt),
+                uri: r.audioUrl,
+              })),
+            );
+          }
+          // 빈 배열이면 setRecords 호출 안 함 → 로컬 데이터 유지
+        } catch (e) {
+          console.log("기록 목록 로드 실패", e.response?.data, e.message);
         }
-      } catch (e) {
-        console.log("기록 목록 로드 실패");
-      }
-    };
-    fetchData();
-  }, []);
+      };
+      fetchData();
+    }, []),
+  );
 
   const filteredRecords =
     searchText.trim() === ""
@@ -114,8 +120,8 @@ export default function AlgokScreen() {
       ? []
       : mindMapData.filter(
           (item) =>
-            item.keyword.includes(searchText) ||
-            item.records.some((r) => r.content.includes(searchText)),
+            item.keyword?.includes(searchText) ||
+            item.records.some((r) => r.content?.includes(searchText)),
         );
 
   return (
@@ -183,6 +189,7 @@ export default function AlgokScreen() {
                       onDelete={async () => {
                         try {
                           await deleteRecordApi(item.id);
+                          console.log("삭제 API 성공");
                         } catch (e) {
                           console.log("삭제 API 실패");
                         }
@@ -200,44 +207,6 @@ export default function AlgokScreen() {
             )}
           </ScrollView>
         )}
-
-        {/* 기록 수정 모달 */}
-        <Modal visible={editModalVisible} transparent animationType="fade">
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={{ flex: 1 }}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalBox}>
-                <Text style={styles.modalTitle}>기록 수정</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={editContent}
-                  onChangeText={setEditContent}
-                  multiline
-                  autoFocus
-                />
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-                    <Text style={styles.modalCancel}>취소</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={async () => {
-                      try {
-                        await updateRecord(editingId, editContent);
-                      } catch (e) {
-                        console.log("수정 API 실패");
-                      }
-                      setEditModalVisible(false);
-                    }}
-                  >
-                    <Text style={styles.modalConfirm}>저장</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </KeyboardAvoidingView>
-        </Modal>
 
         {/* 키워드 탭 */}
         {activeTab === "keyword" && (
@@ -331,6 +300,64 @@ export default function AlgokScreen() {
           </View>
         )}
       </View>
+
+      {/* 기록 수정 모달 */}
+      <Modal visible={editModalVisible} transparent animationType="fade">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>기록 수정</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={editContent}
+                onChangeText={setEditContent}
+                multiline
+                autoFocus
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                  <Text style={styles.modalCancel}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={async () => {
+                    console.log("수정 ID:", editingId, "내용:", editContent);
+                    try {
+                      await updateRecord(editingId, editContent);
+                      console.log("수정 API 성공");
+                      updateRecordLocal(editingId, editContent);
+                    } catch (e) {
+                      console.log("수정 API 실패:", e.message);
+                    }
+                    setEditModalVisible(false);
+                    // 모달 닫힌 후 기록 다시 불러오기
+                    try {
+                      const data = await getRecords();
+                      if (data?.content?.length > 0) {
+                        setRecords(
+                          data.content.map((r) => ({
+                            id: r.recordId,
+                            content: r.content,
+                            type: r.type,
+                            date: new Date(r.createdAt),
+                            uri: r.audioUrl,
+                          })),
+                        );
+                      }
+                    } catch (e) {
+                      console.log("기록 목록 로드 실패");
+                    }
+                  }}
+                >
+                  <Text style={styles.modalConfirm}>저장</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }

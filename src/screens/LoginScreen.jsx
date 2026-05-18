@@ -32,8 +32,9 @@ export default function LoginScreen({ navigation, onLoginSuccess }) {
       await login(email, password);
       const profile = await getMyProfile();
       setNickname(profile.nickname);
-      props.onLoginSuccess(); // 추가
+      onLoginSuccess();
     } catch (e) {
+      console.log("로그인 에러:", e.response?.data, e.message);
       Alert.alert("", "이메일 또는 비밀번호가 올바르지 않아요.");
     } finally {
       setLoading(false);

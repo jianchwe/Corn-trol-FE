@@ -14,16 +14,16 @@ export const createRecord = async (content, type = "TEXT", audioUrl = null) => {
 };
 
 // 기록 목록 조회
-export const getRecords = async (page = 0, size = 20) => {
+export const getRecords = async (page = 0, size = 20, date = null) => {
   const userId = await AsyncStorage.getItem("userId");
-  const response = await client.get("/records", {
-    params: {
-      userId: Number(userId),
-      page,
-      size,
-      sort: "createdAt,desc",
-    },
-  });
+  const params = {
+    userId: Number(userId),
+    page,
+    size,
+    sort: "createdAt,desc",
+  };
+  if (date) params.date = date;
+  const response = await client.get("/records", { params });
   return response.data;
 };
 
@@ -55,6 +55,15 @@ export const searchRecords = async (keyword, page = 0, size = 20) => {
       page,
       size,
     },
+  });
+  return response.data;
+};
+
+// 마인드맵 전체 조회
+export const getMindMap = async () => {
+  const userId = await AsyncStorage.getItem("userId");
+  const response = await client.get("/records/mindmap", {
+    params: { userId: Number(userId) },
   });
   return response.data;
 };

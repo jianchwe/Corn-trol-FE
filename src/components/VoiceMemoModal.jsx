@@ -5,23 +5,24 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
+  Alert,
   Animated,
 } from "react-native";
 import { Audio } from "expo-av";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
+//import DateTimePickerModal from "react-native-modal-datetime-picker"; // 날짜 선택 - 없음
 import { Microphone } from "phosphor-react-native";
 import { colors, typography, spacing, preset } from "../theme";
 
-import { useRecord } from "../context/RecordContext";
-
 import { uploadMedia } from "../api/media";
 import { createRecord } from "../api/records";
+import { requestAnalysis } from "../api/analysis";
+import { useRecord } from "../context/RecordContext";
 
 const BAR_COUNT = 26;
 
 export default function VoiceMemoModal({ visible, onClose, onSave }) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+  //const [currentDate, setCurrentDate] = useState(new Date()); // 날짜 선택 - 없음
+  //const [isDatePickerVisible, setDatePickerVisible] = useState(false);  // 날짜 선택 - 없음
   const [isRecording, setIsRecording] = useState(false);
   const recordingRef = useRef(null);
   const barAnimations = useRef(
@@ -30,7 +31,7 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
   const historyRef = useRef(Array(BAR_COUNT).fill(0));
   const slideAnim = useRef(new Animated.Value(300)).current;
 
-  const { addRecord } = useRecord();
+  const { setLastSaved } = useRecord();
 
   // 모달 슬라이드 애니메이션
   useEffect(() => {
@@ -159,33 +160,23 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
         // 음성 파일 업로드 + STT 변환
         const mediaResult = await uploadMedia(uri);
         // STT 변환된 텍스트로 기록 생성
-        await createRecord(
+        const recordId = await createRecord(
           mediaResult.transcribedText,
           "VOICE",
           mediaResult.fileUrl,
         );
-        addRecord({
-          content: mediaResult.transcribedText || "음성 기록",
-          type: "voice",
-          date: currentDate,
-          uri: mediaResult.fileUrl,
-        });
-      } else {
-        addRecord({
-          content: "음성 기록",
-          type: "voice",
-          date: currentDate,
-          uri: null,
-        });
+        console.log("음성 저장 성공:", recordId);
+        try {
+          const analysisResult = await requestAnalysis(recordId);
+          console.log("분석 성공:", JSON.stringify(analysisResult));
+        } catch (e) {
+          console.log("분석 실패:", e.message);
+        }
+        setLastSaved(Date.now());
       }
     } catch (e) {
-      console.log("음성 업로드 실패");
-      addRecord({
-        content: "음성 기록",
-        type: "voice",
-        date: currentDate,
-        uri: uri,
-      });
+      console.log("음성 업로드 실패:", e.response?.data, e.message);
+      Alert.alert("", "저장에 실패했어요.");
     }
     onClose();
   };
@@ -197,11 +188,12 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
         <Animated.View
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
         >
-          {/* 날짜 */}
+          {/* 날짜
           <TouchableOpacity onPress={() => setDatePickerVisible(true)}>
             <Text style={styles.date}>{formatDate(currentDate)}</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
+          {/* 달력
           <DateTimePickerModal
             isVisible={isDatePickerVisible}
             mode="date"
@@ -212,7 +204,7 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
               setDatePickerVisible(false);
             }}
             onCancel={() => setDatePickerVisible(false)}
-          />
+          /> */}
 
           {/* 마이크 버튼 + 파형 */}
           <TouchableOpacity

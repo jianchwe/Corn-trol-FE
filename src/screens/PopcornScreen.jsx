@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   SafeAreaView,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { colors, typography, spacing, preset } from "../theme";
 import { Microphone, Pencil } from "phosphor-react-native";
@@ -22,6 +23,7 @@ import { useUser } from "../context/UserContext";
 import { useRecord } from "../context/RecordContext";
 
 import { getRecords } from "../api/records";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function PopcornScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -30,9 +32,7 @@ export default function PopcornScreen() {
   const [voiceModalVisible, setVoiceModalVisible] = useState(false);
 
   const { nickname } = useUser();
-
-  const { records } = useRecord();
-
+  const { lastUpdated, lastSaved } = useRecord();
   const [apiRecordCount, setApiRecordCount] = useState(null);
 
   // 팝콘통 위에 9개 고정 배치
@@ -56,29 +56,27 @@ export default function PopcornScreen() {
     const d = String(date.getDate()).padStart(2, "0");
     return `${y}.${m}.${d}`;
   };
-
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
-        const data = await getRecords(0, 100, dateStr);
-        setApiRecordCount(data.totalElements);
-      } catch (e) {
-        setApiRecordCount(null); // 실패 시 로컬 데이터 사용
-      }
-    };
-    fetchCount();
-  }, [currentDate]);
+  useFocusEffect(
+    useCallback(() => {
+      const fetchCount = async () => {
+        try {
+          const token = await AsyncStorage.getItem("accessToken");
+          console.log("토큰:", token);
+          const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
+          const data = await getRecords(0, 100, dateStr);
+          console.log("팝콘 API 결과:", data);
+          setApiRecordCount(data.totalElements);
+        } catch (e) {
+          console.log("팝콘 API 실패:", e.message);
+          setApiRecordCount(null);
+        }
+      };
+      fetchCount();
+    }, [currentDate, lastUpdated, lastSaved]),
+  );
 
   const todayStr = formatDate(currentDate);
-  const todayCount =
-    apiRecordCount !== null
-      ? apiRecordCount
-      : records.filter((r) => {
-          const d = new Date(r.date);
-          const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-          return dateStr === todayStr;
-        }).length;
+  const todayCount = apiRecordCount !== null ? apiRecordCount : 0;
 
   const popcornPieces = useMemo(
     () =>

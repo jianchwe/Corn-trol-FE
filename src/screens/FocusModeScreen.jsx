@@ -15,7 +15,6 @@ import { Svg, Circle } from "react-native-svg";
 import { Play, Pause } from "phosphor-react-native";
 import * as Notifications from "expo-notifications";
 import { colors, typography, spacing, preset } from "../theme";
-import { mockMindMapData } from "../data/mockData";
 import { useUser } from "../context/UserContext";
 
 import { startFocus, endFocus, getQuestions } from "../api/focus";
@@ -351,30 +350,28 @@ export default function FocusModeScreen() {
                 style={{ maxHeight: 290 }}
                 showsVerticalScrollIndicator={false}
               >
-                {(mindMapData.length > 0 ? mindMapData : mockMindMapData).map(
-                  (item) => (
-                    <TouchableOpacity
-                      key={item.keyword}
-                      style={[
-                        styles.recordItem,
-                        selectedRecord?.keyword === item.keyword &&
-                          styles.recordItemSelected,
-                      ]}
-                      onPress={() => {
-                        if (selectedRecord?.keyword === item.keyword) {
-                          setSelectedRecord(null);
-                        } else {
-                          setSelectedRecord(item);
-                        }
-                        setRecordModalVisible(false);
-                      }}
-                    >
-                      <Text style={styles.recordItemText} numberOfLines={2}>
-                        {item.keyword}
-                      </Text>
-                    </TouchableOpacity>
-                  ),
-                )}
+                {mindMapData.map((item) => (
+                  <TouchableOpacity
+                    key={item.keyword}
+                    style={[
+                      styles.recordItem,
+                      selectedRecord?.keyword === item.keyword &&
+                        styles.recordItemSelected,
+                    ]}
+                    onPress={() => {
+                      if (selectedRecord?.keyword === item.keyword) {
+                        setSelectedRecord(null);
+                      } else {
+                        setSelectedRecord(item);
+                      }
+                      setRecordModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.recordItemText} numberOfLines={2}>
+                      {item.keyword}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
             </View>
           </TouchableOpacity>

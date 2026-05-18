@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,11 @@ import { Trash } from "phosphor-react-native";
 export default function RecordCard({ content, date, onDelete, onEdit }) {
   const pan = useRef(new Animated.Value(0)).current;
   const longPressTimer = useRef(null);
+  const onEditRef = useRef(onEdit);
+
+  useEffect(() => {
+    onEditRef.current = onEdit;
+  }, [onEdit]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -24,7 +29,10 @@ export default function RecordCard({ content, date, onDelete, onEdit }) {
       onPanResponderGrant: () => {
         longPressTimer.current = setTimeout(() => {
           Alert.alert("", "이 기록을 어떻게 할까요?", [
-            { text: "수정", onPress: () => onEdit && onEdit() },
+            {
+              text: "수정",
+              onPress: () => onEditRef.current && onEditRef.current(),
+            },
             {
               text: "삭제",
               onPress: () => handleDelete(),

@@ -11,20 +11,21 @@ import {
   Animated,
   Alert,
 } from "react-native";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
+//import DateTimePickerModal from "react-native-modal-datetime-picker"; // 날짜 선택 - 없음
 import { colors, typography, spacing, preset } from "../theme";
-import { useRecord } from "../context/RecordContext";
 
 import { createRecord } from "../api/records";
+import { requestAnalysis } from "../api/analysis";
+import { useRecord } from "../context/RecordContext";
 
 export default function TextMemoModal({ visible, onClose, onSave }) {
   const [content, setContent] = useState("");
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+  //const [currentDate, setCurrentDate] = useState(new Date()); // 날짜 선택 - 없음
+  //const [isDatePickerVisible, setDatePickerVisible] = useState(false);  // 날짜 선택 - 없음
 
   const slideAnim = useRef(new Animated.Value(300)).current;
 
-  const { addRecord } = useRecord();
+  const { setLastSaved } = useRecord();
 
   useEffect(() => {
     if (visible) {
@@ -51,23 +52,21 @@ export default function TextMemoModal({ visible, onClose, onSave }) {
       return;
     }
     try {
-      await createRecord(content, "TEXT");
-      addRecord({
-        content: content,
-        type: "text",
-        date: currentDate,
-      });
+      const result = await createRecord(content, "TEXT");
+      console.log("저장 성공:", result);
+      setLastSaved(Date.now());
+      try {
+        await requestAnalysis(result);
+        const analysisResult = await requestAnalysis(result);
+        console.log("분석 요청 성공:", JSON.stringify(analysisResult));
+      } catch (e) {
+        console.log("분석 요청 실패:", e.response?.data, e.message);
+      }
       setContent("");
       onClose();
     } catch (e) {
-      // 서버 연결 X -> 로컬에만 저장
-      addRecord({
-        content: content,
-        type: "text",
-        date: currentDate,
-      });
-      setContent("");
-      onClose();
+      console.log("저장 실패:", e.message);
+      Alert.alert("", "저장에 실패했어요.");
     }
   };
 
@@ -84,12 +83,12 @@ export default function TextMemoModal({ visible, onClose, onSave }) {
         <Animated.View
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
         >
-          {/* 날짜 */}
+          {/* 날짜
           <TouchableOpacity onPress={() => setDatePickerVisible(true)}>
             <Text style={styles.date}>{formatDate(currentDate)}</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
-          {/* 달력 */}
+          {/* 달력
           <DateTimePickerModal
             isVisible={isDatePickerVisible}
             mode="date"
@@ -100,7 +99,7 @@ export default function TextMemoModal({ visible, onClose, onSave }) {
               setDatePickerVisible(false);
             }}
             onCancel={() => setDatePickerVisible(false)}
-          />
+          /> */}
 
           {/* 텍스트 입력 */}
           <TextInput
