@@ -17,6 +17,7 @@ import { colors, typography, spacing, preset } from "../theme";
 import { createRecord } from "../api/records";
 import { requestAnalysis } from "../api/analysis";
 import { useRecord } from "../context/RecordContext";
+import { recommendConnection, createConnection } from "../api/connection";
 
 export default function TextMemoModal({ visible, onClose, onSave }) {
   const [content, setContent] = useState("");
@@ -24,8 +25,14 @@ export default function TextMemoModal({ visible, onClose, onSave }) {
   //const [isDatePickerVisible, setDatePickerVisible] = useState(false);  // 날짜 선택 - 없음
 
   const slideAnim = useRef(new Animated.Value(300)).current;
+  const [isSaving, setIsSaving] = useState(false);
 
   const { setLastSaved } = useRecord();
+
+  const handleClose = () => {
+    setContent("");
+    onClose();
+  };
 
   useEffect(() => {
     if (visible) {
@@ -47,26 +54,50 @@ export default function TextMemoModal({ visible, onClose, onSave }) {
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     if (content.trim() === "") {
       Alert.alert("", "내용을 입력해주세요.");
       return;
     }
+    setIsSaving(true);
+    handleClose();
     try {
       const result = await createRecord(content, "TEXT");
       console.log("저장 성공:", result);
       setLastSaved(Date.now());
       try {
-        await requestAnalysis(result);
         const analysisResult = await requestAnalysis(result);
         console.log("분석 요청 성공:", JSON.stringify(analysisResult));
       } catch (e) {
         console.log("분석 요청 실패:", e.response?.data, e.message);
       }
-      setContent("");
-      onClose();
+      // 연결 추천 요청
+      try {
+        const recommendResult = await recommendConnection(result);
+        console.log("연결 추천 요청 성공:", JSON.stringify(recommendResult));
+        // 추천 결과로 연결 생성
+        if (
+          recommendResult?.sourceRecordId &&
+          recommendResult?.targetRecordId
+        ) {
+          try {
+            await createConnection(
+              recommendResult.sourceRecordId,
+              recommendResult.targetRecordId,
+            );
+            console.log("연결 생성 성공");
+          } catch (e) {
+            console.log("연결 생성 실패:", e.message);
+          }
+        }
+      } catch (e) {
+        console.log("연결 추천 요청 실패:", e.response?.data, e.message);
+      }
     } catch (e) {
       console.log("저장 실패:", e.message);
       Alert.alert("", "저장에 실패했어요.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -77,7 +108,7 @@ export default function TextMemoModal({ visible, onClose, onSave }) {
         style={styles.overlay}
       >
         {/* 위쪽 어두운 영역 — 누르면 닫힘 */}
-        <TouchableOpacity style={styles.backdrop} onPress={onClose} />
+        <TouchableOpacity style={styles.backdrop} onPress={handleClose} />
 
         {/* 바텀시트 */}
         <Animated.View
@@ -114,11 +145,13 @@ export default function TextMemoModal({ visible, onClose, onSave }) {
 
           {/* 버튼 */}
           <View style={styles.buttonRow}>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={handleClose}>
               <Text style={styles.backButton}>Back</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSave}>
-              <Text style={styles.saveButton}>Save</Text>
+            <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+              <Text style={[styles.saveButton, isSaving && { opacity: 0.4 }]}>
+                Save
+              </Text>
             </TouchableOpacity>
           </View>
         </Animated.View>

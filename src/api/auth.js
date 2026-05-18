@@ -33,6 +33,15 @@ export const login = async (email, password) => {
   return response.data;
 };
 
+// 비밀번호 변경
+export const changePassword = async (currentPassword, newPassword) => {
+  const response = await client.put("/auth/password", {
+    currentPassword,
+    newPassword,
+  });
+  return response.data;
+};
+
 // 로그아웃
 export const logout = async () => {
   await client.post("/auth/logout");

@@ -24,7 +24,7 @@ import MindMapView from "../components/MindMapView";
 import RecordCard from "../components/RecordCard";
 import React from "react";
 import { useRecord } from "../context/RecordContext";
-
+import { requestAnalysis } from "../api/analysis";
 import {
   getRecords,
   updateRecord,
@@ -50,40 +50,17 @@ export default function AlgokScreen() {
 
   const [mindMapData, setMindMapData] = useState([]);
   const [mindMapKeywords, setMindMapKeywords] = useState([]);
+  const [mindMapLinks, setMindMapLinks] = useState([]);
 
   useFocusEffect(
     useCallback(() => {
       const fetchData = async () => {
-        try {
-          const mindmap = await getMindMap();
-          console.log("마인드맵 결과:", JSON.stringify(mindmap));
-          if (mindmap?.nodes?.length > 0) {
-            // 마인드맵 구성
-            const grouped = mindmap.nodes.reduce((acc, node) => {
-              const existing = acc.find((g) => g.keyword === node.keyword);
-              if (existing) {
-                existing.records.push({
-                  id: node.recordId,
-                  content: node.keyword,
-                });
-              } else {
-                acc.push({
-                  keyword: node.keyword,
-                  records: [{ id: node.recordId, content: node.keyword }],
-                });
-              }
-              return acc;
-            }, []);
-            setMindMapData(grouped);
-            setMindMapKeywords(grouped.map((g) => g.keyword));
-          }
-        } catch (e) {
-          console.log("마인드맵 로드 실패", e.response?.data, e.message);
-        }
+        let recordsData = null;
 
         try {
           const data = await getRecords();
           if (data?.content?.length > 0) {
+            recordsData = data.content;
             setRecords(
               data.content.map((r) => ({
                 id: r.recordId,
@@ -91,12 +68,45 @@ export default function AlgokScreen() {
                 type: r.type,
                 date: new Date(r.createdAt),
                 uri: r.audioUrl,
+                mainTopic: r.mainTopic,
               })),
             );
           }
-          // 빈 배열이면 setRecords 호출 안 함 → 로컬 데이터 유지
         } catch (e) {
           console.log("기록 목록 로드 실패", e.response?.data, e.message);
+        }
+
+        try {
+          const mindmap = await getMindMap();
+          console.log("마인드맵 결과:", JSON.stringify(mindmap));
+          if (mindmap?.nodes?.length > 0) {
+            const grouped = mindmap.nodes.reduce((acc, node) => {
+              if (!node.keyword) return acc; // keyword null이면 스킵
+              const record = recordsData?.find(
+                (r) => r.recordId === node.recordId,
+              );
+              const existing = acc.find((g) => g.keyword === node.keyword);
+              if (existing) {
+                existing.records.push({
+                  id: node.recordId,
+                  content: record?.content || "",
+                });
+              } else {
+                acc.push({
+                  keyword: node.keyword,
+                  records: [
+                    { id: node.recordId, content: record?.content || "" },
+                  ],
+                });
+              }
+              return acc;
+            }, []);
+            setMindMapData(grouped);
+            setMindMapKeywords(grouped.map((g) => g.keyword));
+            setMindMapLinks(mindmap.links || []); // 생각 줄기
+          }
+        } catch (e) {
+          console.log("마인드맵 로드 실패", e.response?.data, e.message);
         }
       };
       fetchData();
@@ -244,10 +254,44 @@ export default function AlgokScreen() {
                 <Text style={styles.keywordTitle2}>
                   {selectedKeyword.keyword}
                 </Text>
+                {/* 기본 네비게이터 */}
                 <View style={styles.mindmapPlaceholder}>
                   <MindMapView
-                    keyword={selectedKeyword.keyword}
-                    records={selectedKeyword.records}
+                    keyword={mindMapData[keywordIndex]?.keyword}
+                    records={mindMapData[keywordIndex]?.records || []}
+                    links={mindMapLinks}
+                    onDelete={async (id) => {
+                      try {
+                        await deleteRecordApi(id);
+                        console.log("삭제 API 성공");
+                      } catch (e) {
+                        console.log("삭제 API 실패");
+                      }
+                      deleteRecord(id);
+                    }}
+                    onEdit={async (id, content) => {
+                      try {
+                        await updateRecord(id, content);
+                        updateRecordLocal(id, content);
+                        setMindMapData((prev) =>
+                          prev.map((group) => ({
+                            ...group,
+                            records: group.records.map((r) =>
+                              r.id === id ? { ...r, content } : r,
+                            ),
+                          })),
+                        );
+                        console.log("수정 API 성공");
+                        try {
+                          await requestAnalysis(id);
+                          console.log("재분석 요청 성공");
+                        } catch (e) {
+                          console.log("재분석 요청 실패");
+                        }
+                      } catch (e) {
+                        console.log("수정 API 실패");
+                      }
+                    }}
                   />
                 </View>
               </View>
@@ -289,10 +333,44 @@ export default function AlgokScreen() {
                     />
                   </TouchableOpacity>
                 </View>
+                {/* 기본 네비게이터 */}
                 <View style={styles.mindmapPlaceholder}>
                   <MindMapView
                     keyword={mindMapData[keywordIndex]?.keyword}
                     records={mindMapData[keywordIndex]?.records || []}
+                    links={mindMapLinks}
+                    onDelete={async (id) => {
+                      try {
+                        await deleteRecordApi(id);
+                        console.log("삭제 API 성공");
+                      } catch (e) {
+                        console.log("삭제 API 실패");
+                      }
+                      deleteRecord(id);
+                    }}
+                    onEdit={async (id, content) => {
+                      try {
+                        await updateRecord(id, content);
+                        updateRecordLocal(id, content);
+                        setMindMapData((prev) =>
+                          prev.map((group) => ({
+                            ...group,
+                            records: group.records.map((r) =>
+                              r.id === id ? { ...r, content } : r,
+                            ),
+                          })),
+                        );
+                        console.log("수정 API 성공");
+                        try {
+                          await requestAnalysis(id);
+                          console.log("재분석 요청 성공");
+                        } catch (e) {
+                          console.log("재분석 요청 실패");
+                        }
+                      } catch (e) {
+                        console.log("수정 API 실패");
+                      }
+                    }}
                   />
                 </View>
               </>
@@ -328,11 +406,17 @@ export default function AlgokScreen() {
                       await updateRecord(editingId, editContent);
                       console.log("수정 API 성공");
                       updateRecordLocal(editingId, editContent);
+                      // 재분석 요청
+                      try {
+                        await requestAnalysis(editingId);
+                        console.log("재분석 요청 성공");
+                      } catch (e) {
+                        console.log("재분석 요청 실패");
+                      }
                     } catch (e) {
                       console.log("수정 API 실패:", e.message);
                     }
                     setEditModalVisible(false);
-                    // 모달 닫힌 후 기록 다시 불러오기
                     try {
                       const data = await getRecords();
                       if (data?.content?.length > 0) {

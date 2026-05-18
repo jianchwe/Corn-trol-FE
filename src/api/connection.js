@@ -1,8 +1,13 @@
 import client from "./client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // 연결 추천 요청
 export const recommendConnection = async (recordId) => {
-  const response = await client.post("/connections/recommend", { recordId });
+  const userId = await AsyncStorage.getItem("userId");
+  const response = await client.post("/connections/recommend", {
+    userId: Number(userId),
+    recordId,
+  });
   return response.data;
 };
 

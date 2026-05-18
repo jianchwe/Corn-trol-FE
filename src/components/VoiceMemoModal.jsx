@@ -17,6 +17,7 @@ import { uploadMedia } from "../api/media";
 import { createRecord } from "../api/records";
 import { requestAnalysis } from "../api/analysis";
 import { useRecord } from "../context/RecordContext";
+import { recommendConnection, createConnection } from "../api/connection";
 
 const BAR_COUNT = 26;
 
@@ -32,6 +33,7 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
   const slideAnim = useRef(new Animated.Value(300)).current;
 
   const { setLastSaved } = useRecord();
+  const [isSaving, setIsSaving] = useState(false);
 
   // 모달 슬라이드 애니메이션
   useEffect(() => {
@@ -149,21 +151,32 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
     }
   };
 
+  const handleClose = () => {
+    if (isRecording) {
+      stopRecording();
+    }
+    resetBars();
+    historyRef.current = Array(BAR_COUNT).fill(0);
+    onClose();
+  };
+
   const handleSave = async () => {
+    if (isSaving) return;
     let uri = null;
     if (isRecording) {
       uri = await stopRecording();
     }
-
+    setIsSaving(true);
+    handleClose();
     try {
       if (uri) {
         // 음성 파일 업로드 + STT 변환
         const mediaResult = await uploadMedia(uri);
         // STT 변환된 텍스트로 기록 생성
         const recordId = await createRecord(
-          mediaResult.transcribedText,
+          mediaResult.text,
           "VOICE",
-          mediaResult.fileUrl,
+          mediaResult.url,
         );
         console.log("음성 저장 성공:", recordId);
         try {
@@ -172,19 +185,42 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
         } catch (e) {
           console.log("분석 실패:", e.message);
         }
+        // 연결 추천 요청
+        try {
+          const recommendResult = await recommendConnection(recordId);
+          console.log("연결 추천 요청 성공:", JSON.stringify(recommendResult));
+          // 추천 결과로 연결 생성
+          if (
+            recommendResult?.sourceRecordId &&
+            recommendResult?.targetRecordId
+          ) {
+            try {
+              await createConnection(
+                recommendResult.sourceRecordId,
+                recommendResult.targetRecordId,
+              );
+              console.log("연결 생성 성공");
+            } catch (e) {
+              console.log("연결 생성 실패:", e.message);
+            }
+          }
+        } catch (e) {
+          console.log("연결 추천 요청 실패:", e.response?.data, e.message);
+        }
         setLastSaved(Date.now());
       }
     } catch (e) {
       console.log("음성 업로드 실패:", e.response?.data, e.message);
       Alert.alert("", "저장에 실패했어요.");
+    } finally {
+      setIsSaving(false);
     }
-    onClose();
   };
 
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} onPress={onClose} />
+        <TouchableOpacity style={styles.backdrop} onPress={handleClose} />
         <Animated.View
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
         >
@@ -233,11 +269,13 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
           </Text>
 
           <View style={styles.buttonRow}>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={handleClose}>
               <Text style={styles.backButton}>Back</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSave}>
-              <Text style={styles.saveButton}>Save</Text>
+            <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+              <Text style={[styles.saveButton, isSaving && { opacity: 0.4 }]}>
+                Save
+              </Text>
             </TouchableOpacity>
           </View>
         </Animated.View>

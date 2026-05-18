@@ -23,10 +23,17 @@ const ORBIT_RADIUS = 110;
 const RECT_WIDTH = 85;
 const RECT_HEIGHT = 85;
 
-export default function MindMapView({ keyword, records }) {
+export default function MindMapView({
+  keyword,
+  records,
+  links = [],
+  onDelete,
+  onEdit,
+}) {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editContent, setEditContent] = useState("");
+  const selectedRecordRef = React.useRef(null);
 
   const childPositions = records.map((record, index) => {
     const angle = (2 * Math.PI * index) / records.length - Math.PI / 2;
@@ -52,6 +59,24 @@ export default function MindMapView({ keyword, records }) {
             strokeWidth={1.5}
           />
         ))}
+        {/* 기록 간 연결선 */}
+        {links.map((link) => {
+          const source = childPositions.find((n) => n.id === link.sourceId);
+          const target = childPositions.find((n) => n.id === link.targetId);
+          if (!source || !target) return null;
+          return (
+            <Line
+              key={`link-${link.sourceId}-${link.targetId}`}
+              x1={source.x}
+              y1={source.y}
+              x2={target.x}
+              y2={target.y}
+              stroke={colors.primary}
+              strokeWidth={1.5}
+              strokeDasharray="4,4"
+            />
+          );
+        })}
       </Svg>
 
       {/* 중앙 노드 */}
@@ -115,6 +140,7 @@ export default function MindMapView({ keyword, records }) {
                 <TouchableOpacity
                   style={styles.modalEditButton}
                   onPress={() => {
+                    selectedRecordRef.current = selectedRecord;
                     setEditContent(selectedRecord.content);
                     setEditModalVisible(true);
                     setSelectedRecord(null);
@@ -130,7 +156,7 @@ export default function MindMapView({ keyword, records }) {
                         text: "삭제",
                         style: "destructive",
                         onPress: () => {
-                          // API 연결 필요
+                          onDelete && onDelete(selectedRecord.id);
                           setSelectedRecord(null);
                         },
                       },
@@ -172,7 +198,7 @@ export default function MindMapView({ keyword, records }) {
                 <TouchableOpacity
                   style={styles.modalDeleteButton}
                   onPress={() => {
-                    // API 연결 필요
+                    onEdit && onEdit(selectedRecordRef.current.id, editContent);
                     setEditModalVisible(false);
                   }}
                 >

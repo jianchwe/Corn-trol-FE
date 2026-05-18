@@ -10,6 +10,7 @@ import {
   AppState,
   Alert,
   ScrollView,
+  Pressable,
 } from "react-native";
 import { Svg, Circle } from "react-native-svg";
 import { Play, Pause } from "phosphor-react-native";
@@ -17,8 +18,13 @@ import * as Notifications from "expo-notifications";
 import { colors, typography, spacing, preset } from "../theme";
 import { useUser } from "../context/UserContext";
 
-import { startFocus, endFocus, getQuestions } from "../api/focus";
-import { getMindMap } from "../api/records";
+import {
+  startFocus,
+  endFocus,
+  getQuestions,
+  requestQuestions,
+} from "../api/focus";
+import { useRecord } from "../context/RecordContext";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -47,12 +53,13 @@ export default function FocusModeScreen() {
   const appState = useRef(AppState.currentState);
 
   const { incrementFocusCount } = useUser();
+  const { records } = useRecord();
   const [timerCompleted, setTimerCompleted] = useState(false);
 
   const [sessionId, setSessionId] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [mindMapData, setMindMapData] = useState([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
 
   // 알림 권한 요청
   useEffect(() => {
@@ -60,35 +67,6 @@ export default function FocusModeScreen() {
       await Notifications.requestPermissionsAsync();
     }
     requestPermissions();
-  }, []);
-
-  useEffect(() => {
-    const fetchMindMap = async () => {
-      try {
-        const data = await getMindMap();
-        if (data?.nodes?.length > 0) {
-          const grouped = data.nodes.reduce((acc, node) => {
-            const existing = acc.find((g) => g.keyword === node.keyword);
-            if (existing) {
-              existing.records.push({
-                id: node.recordId,
-                content: node.keyword,
-              });
-            } else {
-              acc.push({
-                keyword: node.keyword,
-                records: [{ id: node.recordId, content: node.keyword }],
-              });
-            }
-            return acc;
-          }, []);
-          setMindMapData(grouped);
-        }
-      } catch (e) {
-        console.log("마인드맵 로드 실패");
-      }
-    };
-    fetchMindMap();
   }, []);
 
   // 앱 포그라운드/백그라운드 감지
@@ -103,7 +81,7 @@ export default function FocusModeScreen() {
       ) {
         Notifications.scheduleNotificationAsync({
           content: {
-            title: `${selectedRecord.keyword} 생각 중이지 않으셨나요?`,
+            title: `${selectedRecord.mainTopic || selectedRecord.content} 생각 중이지 않으셨나요?`,
             body: "알곡 식히기 타이머가 실행 중이에요 🌽",
           },
           trigger: null,
@@ -167,6 +145,11 @@ export default function FocusModeScreen() {
         endFocus(sessionId).catch(() => console.log("집중 모드 종료 API 실패"));
         setSessionId(null);
       }
+      setSelectedRecord(null);
+      setQuestions([]);
+      setQuestionIndex(0);
+      setRemainSeconds(0);
+      setTotalSeconds(0);
       setTimerCompleted(false);
     }
   }, [timerCompleted]);
@@ -234,14 +217,8 @@ export default function FocusModeScreen() {
 
     // 알곡 식히기 시작 API
     try {
-      const id = await startFocus(selectedRecord?.records?.[0]?.id, minutes);
+      const id = await startFocus(selectedRecord?.id, minutes);
       setSessionId(id);
-      // 질문 조회
-      if (selectedRecord?.records?.[0]?.id) {
-        const q = await getQuestions(selectedRecord.records[0].id);
-        setQuestions(q);
-        setQuestionIndex(0);
-      }
     } catch (e) {
       console.log("알곡 식히기 시작 API 실패");
     }
@@ -267,16 +244,39 @@ export default function FocusModeScreen() {
 
         {/* AI 질문 영역 */}
         {selectedRecord ? (
-          <TouchableOpacity
+          <Pressable
             style={styles.questionBox}
-            onPress={() => setRecordModalVisible(true)}
+            onPress={() => {
+              if (questions.length > 0) {
+                setQuestionIndex((prev) => (prev + 1) % questions.length);
+              } else {
+                setRecordModalVisible(true);
+              }
+            }}
+            onLongPress={() => {
+              Alert.alert("", "기록 선택을 해지할까요?", [
+                { text: "취소", style: "cancel" },
+                {
+                  text: "해지",
+                  style: "destructive",
+                  onPress: () => {
+                    setSelectedRecord(null);
+                    setQuestions([]);
+                    setQuestionIndex(0);
+                  },
+                },
+              ]);
+            }}
+            delayLongPress={300}
           >
             <Text style={styles.questionText}>
-              {questions.length > 0
-                ? questions[questionIndex]?.content
-                : "기록을 선택하면 AI 질문이 생성돼요"}
+              {isLoadingQuestions
+                ? "AI 질문 생성 중..."
+                : questions.length > 0
+                  ? questions[questionIndex]?.content
+                  : "기록을 선택하면 AI 질문이 생성돼요"}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         ) : (
           <TouchableOpacity
             style={styles.selectBox}
@@ -350,25 +350,75 @@ export default function FocusModeScreen() {
                 style={{ maxHeight: 290 }}
                 showsVerticalScrollIndicator={false}
               >
-                {mindMapData.map((item) => (
+                {records.map((item) => (
                   <TouchableOpacity
-                    key={item.keyword}
+                    key={item.id}
                     style={[
                       styles.recordItem,
-                      selectedRecord?.keyword === item.keyword &&
+                      selectedRecord?.id === item.id &&
                         styles.recordItemSelected,
                     ]}
-                    onPress={() => {
-                      if (selectedRecord?.keyword === item.keyword) {
+                    onPress={async () => {
+                      if (selectedRecord?.id === item.id) {
                         setSelectedRecord(null);
+                        setQuestions([]);
                       } else {
                         setSelectedRecord(item);
+                        setIsLoadingQuestions(true);
+                        setRecordModalVisible(false);
+
+                        try {
+                          // 1차 생성 요청
+                          await requestQuestions(item.id, item.mainTopic || "");
+                          const q = await getQuestions(item.id);
+                          console.log("1차 질문 생성 성공:", JSON.stringify(q));
+                          setQuestions(q);
+                          setQuestionIndex(0);
+                        } catch (e) {
+                          console.log(
+                            "1차 질문 생성 실패, 기존 질문 조회:",
+                            e.message,
+                          );
+                          try {
+                            // 기존 질문 조회
+                            const existing = await getQuestions(item.id);
+                            console.log(
+                              "기존 질문 조회 성공:",
+                              JSON.stringify(existing),
+                            );
+                            if (existing.length > 0) {
+                              setQuestions(existing);
+                              setQuestionIndex(0);
+                            } else {
+                              // 2차 생성 요청
+                              try {
+                                await requestQuestions(
+                                  item.id,
+                                  item.mainTopic || "",
+                                );
+                                const newQ = await getQuestions(item.id);
+                                console.log(
+                                  "2차 질문 생성 성공:",
+                                  JSON.stringify(newQ),
+                                );
+                                setQuestions(newQ);
+                                setQuestionIndex(0);
+                              } catch (e2) {
+                                console.log("2차 질문 생성 실패:", e2.message);
+                              }
+                            }
+                          } catch (e3) {
+                            console.log("기존 질문 조회 실패:", e3.message);
+                          }
+                        } finally {
+                          setIsLoadingQuestions(false);
+                        }
                       }
                       setRecordModalVisible(false);
                     }}
                   >
                     <Text style={styles.recordItemText} numberOfLines={2}>
-                      {item.keyword}
+                      {item.content}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -433,6 +483,8 @@ const styles = StyleSheet.create({
     ...preset.card,
     borderColor: colors.primary,
     borderWidth: 1.5,
+    //height: 120, // 고정 높이
+    justifyContent: "center",
   },
   questionText: {
     ...typography.body,
@@ -518,6 +570,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1.5,
     borderStyle: "dashed",
+    //height: 120, // 고정 높이
+    justifyContent: "center",
   },
   selectText: {
     ...typography.body,

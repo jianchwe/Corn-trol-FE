@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
   TextInput,
   Alert,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { colors, typography, spacing, preset } from "../theme";
-import { useUser } from "../context/UserContext";
+import { Gear } from "phosphor-react-native";
 
+import { useUser } from "../context/UserContext";
 import { getMyStats, getMyProfile, updateMyProfile } from "../api/user";
-import { logout, withdraw } from "../api/auth";
+import { logout, withdraw, changePassword } from "../api/auth";
 
 const PROFILE_OPTIONS = ["🌱", "🪴", "🌽", "🍿"];
 
@@ -26,21 +28,29 @@ export default function ProfileScreen({ onLogout }) {
 
   const [stats, setStats] = useState(null);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [statsData, profileData] = await Promise.all([
-          getMyStats(),
-          getMyProfile(),
-        ]);
-        setStats(statsData);
-        setNickname(profileData.nickname);
-      } catch (e) {
-        console.log("통계 로드 실패");
-      }
-    };
-    fetchStats();
-  }, []);
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchStats = async () => {
+        try {
+          const [statsData, profileData] = await Promise.all([
+            getMyStats(),
+            getMyProfile(),
+          ]);
+          console.log("통계 결과:", JSON.stringify(statsData));
+          setStats(statsData);
+          setNickname(profileData.nickname);
+        } catch (e) {
+          console.log("통계 로드 실패");
+        }
+      };
+      fetchStats();
+    }, []),
+  );
 
   // 닉네임 설정
   const handleNicknameSave = async () => {
@@ -55,6 +65,21 @@ export default function ProfileScreen({ onLogout }) {
     setNicknameModalVisible(false);
   };
 
+  // 비밀번호 변경
+  const handlePasswordChange = async () => {
+    if (!currentPassword.trim() || !newPassword.trim()) return;
+    try {
+      await changePassword(currentPassword, newPassword);
+      Alert.alert("", "비밀번호가 변경됐어요.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setPasswordModalVisible(false);
+    } catch (e) {
+      Alert.alert("", "비밀번호 변경에 실패했어요.");
+    }
+  };
+
+  // 로그아웃
   const handleLogout = async () => {
     Alert.alert("", "로그아웃 할까요?", [
       { text: "취소", style: "cancel" },
@@ -73,6 +98,7 @@ export default function ProfileScreen({ onLogout }) {
     ]);
   };
 
+  // 회원탈퇴
   const handleWithdraw = async () => {
     Alert.alert("", "정말 탈퇴할까요?\n모든 데이터가 삭제돼요.", [
       { text: "취소", style: "cancel" },
@@ -97,6 +123,13 @@ export default function ProfileScreen({ onLogout }) {
         <View style={styles.cardContainer}>
           <Text style={styles.title}>콘 프로필</Text>
           <View style={styles.card}>
+            {/* 설정 */}
+            <TouchableOpacity
+              style={styles.settingsIcon}
+              onPress={() => setSettingsModalVisible(true)}
+            >
+              <Gear size={25} color={colors.primary} />
+            </TouchableOpacity>
             {/* 프로필 이모지 */}
             <TouchableOpacity
               style={styles.profile}
@@ -127,7 +160,7 @@ export default function ProfileScreen({ onLogout }) {
               <View style={styles.line} />
               <View style={styles.recordItem}>
                 <Text style={styles.recordsScore}>
-                  {stats ? stats.totalFocusTime : focusCount}
+                  {stats ? stats.totalFocusCount : focusCount}
                 </Text>
                 <Text style={styles.recordsText}>알곡 식히기 횟수</Text>
               </View>
@@ -140,17 +173,8 @@ export default function ProfileScreen({ onLogout }) {
               </View>
             </View>
           </View>
-          <View style={styles.bottomButtons}>
-            <TouchableOpacity onPress={handleWithdraw}>
-              <Text style={styles.logoutText}>회원탈퇴</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleLogout}>
-              <Text style={styles.logoutText}>로그아웃</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </View>
-
       {/* 프로필 선택 모달 */}
       <Modal visible={profileModalVisible} transparent animationType="fade">
         <TouchableOpacity
@@ -182,7 +206,6 @@ export default function ProfileScreen({ onLogout }) {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-
       {/* 닉네임 변경 모달 */}
       <Modal visible={nicknameModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -201,6 +224,96 @@ export default function ProfileScreen({ onLogout }) {
               </TouchableOpacity>
               <TouchableOpacity onPress={handleNicknameSave}>
                 <Text style={styles.modalConfirm}>저장</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* 설정 모달 */}
+      <Modal visible={settingsModalVisible} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          onPress={() => setSettingsModalVisible(false)}
+          activeOpacity={1}
+        >
+          <TouchableOpacity activeOpacity={1}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>설정</Text>
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => {
+                  setSettingsModalVisible(false);
+                  setInputNickname(nickname);
+                  setNicknameModalVisible(true);
+                }}
+              >
+                <Text style={styles.settingItemText}>닉네임 변경</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => {
+                  setSettingsModalVisible(false);
+                  setPasswordModalVisible(true);
+                }}
+              >
+                <Text style={styles.settingItemText}>비밀번호 변경</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => {
+                  setSettingsModalVisible(false);
+                  handleLogout();
+                }}
+              >
+                <Text style={styles.settingItemText}>로그아웃</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={() => {
+                  setSettingsModalVisible(false);
+                  handleWithdraw();
+                }}
+              >
+                <Text style={[styles.settingItemText, { color: "#FF5252" }]}>
+                  회원탈퇴
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 비밀번호 변경 모달 */}
+      <Modal visible={passwordModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>비밀번호 변경</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="현재 비밀번호"
+              placeholderTextColor={colors.textSecondary}
+              secureTextEntry
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+            />
+            <Text style={styles.passwordHint}>
+              8~20자, 영문 대소문자·숫자·특수문자(@$!%*?&) 각 1개 이상
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="새 비밀번호"
+              placeholderTextColor={colors.textSecondary}
+              secureTextEntry
+              value={newPassword}
+              onChangeText={setNewPassword}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity onPress={() => setPasswordModalVisible(false)}>
+                <Text style={styles.modalCancel}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handlePasswordChange}>
+                <Text style={styles.modalConfirm}>변경</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -332,7 +445,7 @@ const styles = StyleSheet.create({
   },
   modalBox: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 26,
     padding: spacing.lg,
     width: "80%",
   },
@@ -341,6 +454,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.md,
     textAlign: "center",
+    paddingHorizontal: 20,
   },
   modalInput: {
     backgroundColor: colors.surface,
@@ -364,14 +478,29 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: "bold",
   },
-  bottomButtons: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: spacing.xl,
-    paddingVertical: spacing.lg,
-  },
   logoutText: {
     ...typography.body,
     color: colors.textSecondary,
+  },
+  settingsIcon: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+  },
+  settingItem: {
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  settingItemText: {
+    ...typography.body,
+    color: colors.textPrimary,
+    textAlign: "center",
+    paddingHorizontal: 12,
+  },
+  passwordHint: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
   },
 });
