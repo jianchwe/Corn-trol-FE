@@ -1,13 +1,12 @@
 import client from "./client";
 
-// 음성 파일 업로드 + STT 변환
 export const uploadMedia = async (uri) => {
   console.log("미디어 업로드 시작:", uri);
   const formData = new FormData();
   formData.append("file", {
     uri,
-    type: "audio/m4a",
-    name: "recording.m4a",
+    type: "audio/wav", // m4a → wav
+    name: "recording.wav", // m4a → wav
   });
 
   try {
@@ -15,6 +14,7 @@ export const uploadMedia = async (uri) => {
       headers: {
         "Content-Type": "multipart/form-data",
       },
+      timeout: 120000, // 2분 - Render 슬립 대응
     });
     console.log("미디어 업로드 결과:", response.data);
     return response.data;
@@ -24,7 +24,6 @@ export const uploadMedia = async (uri) => {
   }
 };
 
-// 미디어 조회
 export const getMedia = async (id) => {
   const response = await client.get(`/media/${id}`);
   return response.data;

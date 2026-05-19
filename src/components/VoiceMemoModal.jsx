@@ -34,6 +34,7 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
 
   const { setLastSaved } = useRecord();
   const [isSaving, setIsSaving] = useState(false);
+  const lastRecordingUriRef = useRef(null);
 
   // 모달 슬라이드 애니메이션
   useEffect(() => {
@@ -109,7 +110,25 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
 
       const recording = new Audio.Recording();
       await recording.prepareToRecordAsync({
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        android: {
+          extension: ".wav",
+          outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+          audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: ".wav",
+          outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+          audioQuality: Audio.IOSAudioQuality.HIGH,
+          sampleRate: 44100,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
         isMeteringEnabled: true,
       });
 
@@ -136,6 +155,7 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
       recordingRef.current = null;
       setIsRecording(false);
       resetBars();
+      lastRecordingUriRef.current = uri; // ← 저장
       return uri;
     } catch (err) {
       console.error("녹음 중지 실패:", err);
@@ -157,6 +177,7 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
     }
     resetBars();
     historyRef.current = Array(BAR_COUNT).fill(0);
+    lastRecordingUriRef.current = null;
     onClose();
   };
 
@@ -165,6 +186,8 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
     let uri = null;
     if (isRecording) {
       uri = await stopRecording();
+    } else {
+      uri = lastRecordingUriRef.current; // 이미 중지된 경우 ref에서 꺼내기
     }
     setIsSaving(true);
     handleClose();
