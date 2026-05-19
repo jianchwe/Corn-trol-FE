@@ -293,11 +293,11 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
 
           <View style={styles.buttonRow}>
             <TouchableOpacity onPress={handleClose}>
-              <Text style={styles.backButton}>Back</Text>
+              <Text style={styles.backButton}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleSave} disabled={isSaving}>
               <Text style={[styles.saveButton, isSaving && { opacity: 0.4 }]}>
-                Save
+                저장
               </Text>
             </TouchableOpacity>
           </View>

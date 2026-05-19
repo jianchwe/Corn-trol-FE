@@ -67,7 +67,8 @@ export default function TextMemoModal({ visible, onClose, onSave }) {
       setLastSaved(Date.now());
       try {
         const analysisResult = await requestAnalysis(result);
-        console.log("분석 요청 성공:", JSON.stringify(analysisResult));
+        console.log("분석 요청 성공");
+        //console.log("분석 요청 성공:", JSON.stringify(analysisResult));
       } catch (e) {
         console.log("분석 요청 실패:", e.response?.data, e.message);
       }
@@ -146,11 +147,11 @@ export default function TextMemoModal({ visible, onClose, onSave }) {
           {/* 버튼 */}
           <View style={styles.buttonRow}>
             <TouchableOpacity onPress={handleClose}>
-              <Text style={styles.backButton}>Back</Text>
+              <Text style={styles.backButton}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleSave} disabled={isSaving}>
               <Text style={[styles.saveButton, isSaving && { opacity: 0.4 }]}>
-                Save
+                저장
               </Text>
             </TouchableOpacity>
           </View>
