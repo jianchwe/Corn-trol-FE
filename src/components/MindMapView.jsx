@@ -10,7 +10,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { Svg, Line } from "react-native-svg";
+import { Svg, Line, Path } from "react-native-svg";
 import { colors, typography, spacing } from "../theme";
 import { X } from "phosphor-react-native";
 
@@ -64,16 +64,23 @@ export default function MindMapView({
           const source = childPositions.find((n) => n.id === link.sourceId);
           const target = childPositions.find((n) => n.id === link.targetId);
           if (!source || !target) return null;
+
+          const midX = (source.x + target.x) / 2;
+          const midY = (source.y + target.y) / 2;
+          const dx = midX - CENTER_X;
+          const dy = midY - CENTER_Y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const cpX = midX + (dx / dist) * 60;
+          const cpY = midY + (dy / dist) * 60;
+
           return (
-            <Line
+            <Path
               key={`link-${link.sourceId}-${link.targetId}`}
-              x1={source.x}
-              y1={source.y}
-              x2={target.x}
-              y2={target.y}
+              d={`M ${source.x} ${source.y} Q ${cpX} ${cpY} ${target.x} ${target.y}`}
               stroke={colors.primary}
               strokeWidth={1.5}
               strokeDasharray="4,4"
+              fill="none"
             />
           );
         })}

@@ -1,5 +1,6 @@
 import client from "./client";
 
+// 음성 파일 업로드 + STT 변환
 export const uploadMedia = async (uri) => {
   console.log("미디어 업로드 시작:", uri);
   const formData = new FormData();

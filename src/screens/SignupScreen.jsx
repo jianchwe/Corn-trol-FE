@@ -9,6 +9,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
 import { colors, typography, spacing } from "../theme";
 import { sendVerificationEmail, verifyEmail, signup } from "../api/auth";
@@ -92,104 +93,110 @@ export default function SignupScreen({ navigation }) {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <View style={styles.inner}>
-          <Text style={styles.title}>회원가입</Text>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.inner}>
+            <Text style={styles.title}>회원가입</Text>
 
-          {/* 닉네임 */}
-          <Text style={styles.label}>닉네임</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="닉네임 입력"
-            placeholderTextColor={colors.textSecondary}
-            value={nickname}
-            onChangeText={setNickname}
-          />
-
-          {/* 이메일 */}
-          <Text style={styles.label}>이메일</Text>
-          <View style={styles.row}>
+            {/* 닉네임 */}
+            <Text style={styles.label}>닉네임</Text>
             <TextInput
-              style={[styles.input, { flex: 1, marginBottom: 0 }]}
-              placeholder="이메일 입력"
+              style={styles.input}
+              placeholder="닉네임 입력"
               placeholderTextColor={colors.textSecondary}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
+              value={nickname}
+              onChangeText={setNickname}
             />
+
+            {/* 이메일 */}
+            <Text style={styles.label}>이메일</Text>
+            <View style={styles.row}>
+              <TextInput
+                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                placeholder="이메일 입력"
+                placeholderTextColor={colors.textSecondary}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.smallButton}
+                onPress={handleSendEmail}
+                disabled={loading}
+              >
+                <Text style={styles.smallButtonText}>
+                  {isEmailSent ? "재발송" : "발송"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* 인증번호 */}
+            {isEmailSent && (
+              <>
+                <Text style={styles.label}>인증번호</Text>
+                <View style={styles.row}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                    placeholder="인증번호 입력"
+                    placeholderTextColor={colors.textSecondary}
+                    value={code}
+                    onChangeText={setCode}
+                    keyboardType="number-pad"
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.smallButton,
+                      isEmailVerified && styles.smallButtonVerified,
+                    ]}
+                    onPress={handleVerifyEmail}
+                    disabled={isEmailVerified || loading}
+                  >
+                    <Text style={styles.smallButtonText}>
+                      {isEmailVerified ? "완료" : "확인"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* 비밀번호 */}
+            <Text style={styles.label}>비밀번호</Text>
+            <Text style={styles.hint}>
+              8~20자, 영문 대소문자, 숫자, 특수문자(@$!%*?&) 각 1개 이상
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="비밀번호 입력"
+              placeholderTextColor={colors.textSecondary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+
+            {/* 회원가입 버튼 */}
             <TouchableOpacity
-              style={styles.smallButton}
-              onPress={handleSendEmail}
+              style={styles.signupButton}
+              onPress={handleSignup}
               disabled={loading}
             >
-              <Text style={styles.smallButtonText}>
-                {isEmailSent ? "재발송" : "발송"}
+              <Text style={styles.signupButtonText}>
+                {loading ? "처리 중..." : "회원가입"}
               </Text>
             </TouchableOpacity>
+
+            {/* 로그인으로 이동 */}
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => navigation.navigate("Login")}
+            >
+              <Text style={styles.loginButtonText}>이미 계정이 있어요</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* 인증번호 */}
-          {isEmailSent && (
-            <>
-              <Text style={styles.label}>인증번호</Text>
-              <View style={styles.row}>
-                <TextInput
-                  style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                  placeholder="인증번호 입력"
-                  placeholderTextColor={colors.textSecondary}
-                  value={code}
-                  onChangeText={setCode}
-                  keyboardType="number-pad"
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.smallButton,
-                    isEmailVerified && styles.smallButtonVerified,
-                  ]}
-                  onPress={handleVerifyEmail}
-                  disabled={isEmailVerified || loading}
-                >
-                  <Text style={styles.smallButtonText}>
-                    {isEmailVerified ? "완료" : "확인"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-
-          {/* 비밀번호 */}
-          <Text style={styles.label}>비밀번호</Text>
-          <Text style={styles.hint}>
-            8~20자, 영문 대소문자, 숫자, 특수문자(@$!%*?&) 각 1개 이상
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="비밀번호 입력"
-            placeholderTextColor={colors.textSecondary}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-
-          {/* 회원가입 버튼 */}
-          <TouchableOpacity
-            style={styles.signupButton}
-            onPress={handleSignup}
-            disabled={loading}
-          >
-            <Text style={styles.signupButtonText}>
-              {loading ? "처리 중..." : "회원가입"}
-            </Text>
-          </TouchableOpacity>
-
-          {/* 로그인으로 이동 */}
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => navigation.navigate("Login")}
-          >
-            <Text style={styles.loginButtonText}>이미 계정이 있어요</Text>
-          </TouchableOpacity>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

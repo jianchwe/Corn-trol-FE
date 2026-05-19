@@ -122,7 +122,7 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
           extension: ".wav",
           outputFormat: Audio.IOSOutputFormat.LINEARPCM,
           audioQuality: Audio.IOSAudioQuality.HIGH,
-          sampleRate: 44100,
+          sampleRate: 16000,
           numberOfChannels: 1,
           bitRate: 128000,
           linearPCMBitDepth: 16,
