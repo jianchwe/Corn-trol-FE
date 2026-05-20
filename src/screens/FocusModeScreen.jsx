@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Modal,
   TextInput,
   AppState,

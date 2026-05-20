@@ -5,6 +5,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import SplashScreen from "./src/screens/SplashScreen";
 import PopcornScreen from "./src/screens/PopcornScreen";
@@ -111,30 +112,32 @@ export default function App() {
   }
 
   return (
-    <UserProvider>
-      <RecordProvider>
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            {isLoggedIn ? (
-              <Stack.Screen name="Main">
-                {() => <TabNavigator onLogout={() => setIsLoggedIn(false)} />}
-              </Stack.Screen>
-            ) : (
-              <>
-                <Stack.Screen name="Login">
-                  {(props) => (
-                    <LoginScreen
-                      {...props}
-                      onLoginSuccess={() => setIsLoggedIn(true)}
-                    />
-                  )}
+    <SafeAreaProvider>
+      <UserProvider>
+        <RecordProvider>
+          <NavigationContainer>
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              {isLoggedIn ? (
+                <Stack.Screen name="Main">
+                  {() => <TabNavigator onLogout={() => setIsLoggedIn(false)} />}
                 </Stack.Screen>
-                <Stack.Screen name="Signup" component={SignupScreen} />
-              </>
-            )}
-          </Stack.Navigator>
-        </NavigationContainer>
-      </RecordProvider>
-    </UserProvider>
+              ) : (
+                <>
+                  <Stack.Screen name="Login">
+                    {(props) => (
+                      <LoginScreen
+                        {...props}
+                        onLoginSuccess={() => setIsLoggedIn(true)}
+                      />
+                    )}
+                  </Stack.Screen>
+                  <Stack.Screen name="Signup" component={SignupScreen} />
+                </>
+              )}
+            </Stack.Navigator>
+          </NavigationContainer>
+        </RecordProvider>
+      </UserProvider>
+    </SafeAreaProvider>
   );
 }

@@ -1,11 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { colors, typography, spacing, preset } from "../theme";
