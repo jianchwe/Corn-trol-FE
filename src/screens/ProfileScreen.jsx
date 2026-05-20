@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -25,9 +25,7 @@ export default function ProfileScreen({ onLogout }) {
   const [nicknameModalVisible, setNicknameModalVisible] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [inputNickname, setInputNickname] = useState("");
-
   const [stats, setStats] = useState(null);
-
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -41,31 +39,24 @@ export default function ProfileScreen({ onLogout }) {
             getMyStats(),
             getMyProfile(),
           ]);
-          console.log("통계 결과:", JSON.stringify(statsData));
           setStats(statsData);
           setNickname(profileData.nickname);
-        } catch (e) {
-          console.log("통계 로드 실패");
-        }
+        } catch (e) {}
       };
       fetchStats();
     }, []),
   );
 
-  // 닉네임 설정
   const handleNicknameSave = async () => {
     if (inputNickname.trim() === "") return;
     try {
       await updateMyProfile(inputNickname.trim());
-    } catch (e) {
-      console.log("닉네임 변경 API 실패");
-    }
+    } catch (e) {}
     setNickname(inputNickname.trim());
     setInputNickname("");
     setNicknameModalVisible(false);
   };
 
-  // 비밀번호 변경
   const handlePasswordChange = async () => {
     if (!currentPassword.trim() || !newPassword.trim()) return;
     try {
@@ -79,7 +70,6 @@ export default function ProfileScreen({ onLogout }) {
     }
   };
 
-  // 로그아웃
   const handleLogout = async () => {
     Alert.alert("", "로그아웃 할까요?", [
       { text: "취소", style: "cancel" },
@@ -89,16 +79,13 @@ export default function ProfileScreen({ onLogout }) {
         onPress: async () => {
           try {
             await logout();
-          } catch (e) {
-            console.log("로그아웃 API 실패:", e.message);
-          }
+          } catch (e) {}
           onLogout();
         },
       },
     ]);
   };
 
-  // 회원탈퇴
   const handleWithdraw = async () => {
     Alert.alert("", "정말 탈퇴할까요?\n모든 데이터가 삭제돼요.", [
       { text: "취소", style: "cancel" },
@@ -108,9 +95,7 @@ export default function ProfileScreen({ onLogout }) {
         onPress: async () => {
           try {
             await withdraw();
-          } catch (e) {
-            console.log("회원탈퇴 API 실패:", e.message);
-          }
+          } catch (e) {}
           onLogout();
         },
       },
@@ -123,13 +108,14 @@ export default function ProfileScreen({ onLogout }) {
         <View style={styles.cardContainer}>
           <Text style={styles.title}>콘 프로필</Text>
           <View style={styles.card}>
-            {/* 설정 */}
+            {/* 설정 아이콘 */}
             <TouchableOpacity
               style={styles.settingsIcon}
               onPress={() => setSettingsModalVisible(true)}
             >
               <Gear size={25} color={colors.primary} />
             </TouchableOpacity>
+
             {/* 프로필 이모지 */}
             <TouchableOpacity
               style={styles.profile}
@@ -175,6 +161,7 @@ export default function ProfileScreen({ onLogout }) {
           </View>
         </View>
       </View>
+
       {/* 프로필 선택 모달 */}
       <Modal visible={profileModalVisible} transparent animationType="fade">
         <TouchableOpacity
@@ -206,6 +193,7 @@ export default function ProfileScreen({ onLogout }) {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
       {/* 닉네임 변경 모달 */}
       <Modal visible={nicknameModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -229,6 +217,7 @@ export default function ProfileScreen({ onLogout }) {
           </View>
         </View>
       </Modal>
+
       {/* 설정 모달 */}
       <Modal visible={settingsModalVisible} transparent animationType="fade">
         <TouchableOpacity
@@ -307,7 +296,6 @@ export default function ProfileScreen({ onLogout }) {
               value={newPassword}
               onChangeText={setNewPassword}
             />
-
             <View style={styles.modalButtons}>
               <TouchableOpacity onPress={() => setPasswordModalVisible(false)}>
                 <Text style={styles.modalCancel}>취소</Text>
@@ -388,7 +376,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderColor: colors.primary,
     borderWidth: 2,
-    //...preset.card,
     marginTop: spacing.lg,
     flexDirection: "row",
     alignItems: "center",
@@ -477,10 +464,6 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.primary,
     fontWeight: "bold",
-  },
-  logoutText: {
-    ...typography.body,
-    color: colors.textSecondary,
   },
   settingsIcon: {
     position: "absolute",

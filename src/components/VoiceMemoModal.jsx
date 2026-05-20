@@ -9,7 +9,6 @@ import {
   Animated,
 } from "react-native";
 import { Audio } from "expo-av";
-//import DateTimePickerModal from "react-native-modal-datetime-picker"; // 날짜 선택 - 없음
 import { Microphone } from "phosphor-react-native";
 import { colors, typography, spacing, preset } from "../theme";
 
@@ -22,8 +21,6 @@ import { recommendConnection, createConnection } from "../api/connection";
 const BAR_COUNT = 26;
 
 export default function VoiceMemoModal({ visible, onClose, onSave }) {
-  //const [currentDate, setCurrentDate] = useState(new Date()); // 날짜 선택 - 없음
-  //const [isDatePickerVisible, setDatePickerVisible] = useState(false);  // 날짜 선택 - 없음
   const [isRecording, setIsRecording] = useState(false);
   const recordingRef = useRef(null);
   const barAnimations = useRef(
@@ -56,13 +53,6 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
     }
   }, [visible]);
 
-  const formatDate = (date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}.${m}.${d}`;
-  };
-
   const updateBars = (metering) => {
     const normalized = Math.max(0, Math.min(1, (metering + 30) / 30));
 
@@ -75,7 +65,6 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
 
     barAnimations.forEach((anim, index) => {
       const height = minHeight + (maxHeight - minHeight) * newHistory[index];
-
       Animated.spring(anim, {
         toValue: height,
         useNativeDriver: false,
@@ -142,9 +131,7 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
       await recording.startAsync();
       recordingRef.current = recording;
       setIsRecording(true);
-    } catch (err) {
-      console.error("녹음 시작 실패:", err);
-    }
+    } catch (err) {}
   };
 
   const stopRecording = async () => {
@@ -155,10 +142,9 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
       recordingRef.current = null;
       setIsRecording(false);
       resetBars();
-      lastRecordingUriRef.current = uri; // ← 저장
+      lastRecordingUriRef.current = uri;
       return uri;
     } catch (err) {
-      console.error("녹음 중지 실패:", err);
       return null;
     }
   };
@@ -187,33 +173,23 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
     if (isRecording) {
       uri = await stopRecording();
     } else {
-      uri = lastRecordingUriRef.current; // 이미 중지된 경우 ref에서 꺼내기
+      uri = lastRecordingUriRef.current;
     }
     setIsSaving(true);
     handleClose();
     try {
       if (uri) {
-        // 음성 파일 업로드 + STT 변환
         const mediaResult = await uploadMedia(uri);
-        // STT 변환된 텍스트로 기록 생성
         const recordId = await createRecord(
           mediaResult.text,
           "VOICE",
           mediaResult.url,
         );
-        console.log("음성 저장 성공:", recordId);
         try {
-          const analysisResult = await requestAnalysis(recordId);
-          //console.log("분석 성공:", JSON.stringify(analysisResult));
-          console.log("분석 성공:");
-        } catch (e) {
-          console.log("분석 실패:", e.message);
-        }
-        // 연결 추천 요청
+          await requestAnalysis(recordId);
+        } catch (e) {}
         try {
           const recommendResult = await recommendConnection(recordId);
-          console.log("연결 추천 요청 성공:", JSON.stringify(recommendResult));
-          // 추천 결과로 연결 생성
           if (
             recommendResult?.sourceRecordId &&
             recommendResult?.targetRecordId
@@ -223,18 +199,12 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
                 recommendResult.sourceRecordId,
                 recommendResult.targetRecordId,
               );
-              console.log("연결 생성 성공");
-            } catch (e) {
-              console.log("연결 생성 실패:", e.message);
-            }
+            } catch (e) {}
           }
-        } catch (e) {
-          console.log("연결 추천 요청 실패:", e.response?.data, e.message);
-        }
+        } catch (e) {}
         setLastSaved(Date.now());
       }
     } catch (e) {
-      console.log("음성 업로드 실패:", e.response?.data, e.message);
       Alert.alert("", "저장에 실패했어요.");
     } finally {
       setIsSaving(false);
@@ -248,24 +218,6 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
         <Animated.View
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
         >
-          {/* 날짜
-          <TouchableOpacity onPress={() => setDatePickerVisible(true)}>
-            <Text style={styles.date}>{formatDate(currentDate)}</Text>
-          </TouchableOpacity> */}
-
-          {/* 달력
-          <DateTimePickerModal
-            isVisible={isDatePickerVisible}
-            mode="date"
-            date={currentDate}
-            display="inline"
-            onConfirm={(date) => {
-              setCurrentDate(date);
-              setDatePickerVisible(false);
-            }}
-            onCancel={() => setDatePickerVisible(false)}
-          /> */}
-
           {/* 마이크 버튼 + 파형 */}
           <TouchableOpacity
             style={[styles.micCircle, isRecording && styles.micCircleActive]}
@@ -327,12 +279,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     alignItems: "center",
   },
-  date: {
-    ...typography.h2,
-    color: colors.textSecondary,
-    textAlign: "center",
-    marginBottom: spacing.lg,
-  },
   micCircle: {
     width: 230,
     height: 230,
@@ -342,7 +288,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: spacing.lg,
     marginBottom: spacing.xl,
-    //overflow: "hidden",
     ...preset.card,
     borderWidth: 0,
   },
@@ -381,6 +326,5 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontFamily: "Pretendard-SemiBold",
     color: colors.primary,
-    //paddingRight: 30,
   },
 });

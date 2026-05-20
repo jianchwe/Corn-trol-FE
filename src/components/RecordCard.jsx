@@ -77,12 +77,10 @@ export default function RecordCard({ content, date, onDelete, onEdit }) {
 
   return (
     <View style={styles.wrapper}>
-      {/* 삭제 버튼 */}
       <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
         <Trash size={22} color="#FFFFFF" weight="fill" />
       </TouchableOpacity>
 
-      {/* 카드 */}
       <Animated.View
         style={[styles.card, { transform: [{ translateX: pan }] }]}
         {...panResponder.panHandlers}

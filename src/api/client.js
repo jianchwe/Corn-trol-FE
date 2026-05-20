@@ -9,7 +9,6 @@ const client = axios.create({
   },
 });
 
-// 요청마다 토큰 자동 첨부
 client.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem("accessToken");
   if (token) {
@@ -18,7 +17,6 @@ client.interceptors.request.use(async (config) => {
   return config;
 });
 
-// 응답 에러 처리 + 토큰 자동 갱신
 client.interceptors.response.use(
   (response) => response,
   async (error) => {

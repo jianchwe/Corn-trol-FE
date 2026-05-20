@@ -34,7 +34,6 @@ export default function LoginScreen({ navigation, onLoginSuccess }) {
       setNickname(profile.nickname);
       onLoginSuccess();
     } catch (e) {
-      console.log("로그인 에러:", e.response?.data, e.message);
       Alert.alert("", "이메일 또는 비밀번호가 올바르지 않아요.");
     } finally {
       setLoading(false);

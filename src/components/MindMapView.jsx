@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -33,7 +33,7 @@ export default function MindMapView({
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editContent, setEditContent] = useState("");
-  const selectedRecordRef = React.useRef(null);
+  const selectedRecordRef = useRef(null);
 
   const childPositions = records.map((record, index) => {
     const angle = (2 * Math.PI * index) / records.length - Math.PI / 2;
@@ -136,7 +136,6 @@ export default function MindMapView({
                 style={styles.modalCloseX}
                 onPress={() => setSelectedRecord(null)}
               >
-                {/* 닫기 */}
                 <X size={16} color={colors.textSecondary} weight="bold" />
               </TouchableOpacity>
               {selectedRecord?.date && (
@@ -154,7 +153,6 @@ export default function MindMapView({
               <Text style={styles.modalContent}>{selectedRecord?.content}</Text>
               <View style={styles.modalButtons}>
                 <TouchableOpacity
-                  //style={styles.modalDeleteButton}
                   onPress={() => {
                     Alert.alert("", "이 기록을 삭제할까요?", [
                       {
@@ -172,7 +170,6 @@ export default function MindMapView({
                   <Text style={styles.modalDeleteText}>삭제</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  //style={styles.modalEditButton}
                   onPress={() => {
                     selectedRecordRef.current = selectedRecord;
                     setEditContent(selectedRecord.content);
@@ -297,10 +294,6 @@ const styles = StyleSheet.create({
     right: 10,
     padding: spacing.md,
   },
-  modalCloseXText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
   modalDate: {
     ...typography.small,
     color: colors.textSecondary,
@@ -313,8 +306,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   modalEditButton: {
-    // flex: 1,
-    // borderRadius: 12,
     paddingVertical: spacing.sm,
     alignItems: "center",
   },
@@ -325,15 +316,12 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   modalDeleteButton: {
-    // flex: 1,
-    // borderRadius: 12,
     paddingVertical: spacing.sm,
     alignItems: "center",
   },
   modalDeleteText: {
     ...typography.body,
     color: colors.textSecondary,
-    //color: "#FF5252",
     marginBottom: 5,
   },
   modalEditTitle: {

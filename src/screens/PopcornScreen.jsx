@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
@@ -16,9 +16,19 @@ import PopCornBox from "../../assets/PopCornBox.svg";
 
 import { useUser } from "../context/UserContext";
 import { useRecord } from "../context/RecordContext";
-
 import { getRecords } from "../api/records";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const POPCORN_POSITIONS = [
+  { x: -100, y: 0, rotation: -10 }, // 하단1
+  { x: -40, y: -10, rotation: 5 }, // 하단2
+  { x: 40, y: -5, rotation: 15 }, // 하단3
+  { x: 100, y: 0, rotation: 15 }, // 하단4
+  { x: -80, y: 60, rotation: 10 }, // 중단1
+  { x: -10, y: 50, rotation: 50 }, // 중단2
+  { x: 70, y: 55, rotation: -5 }, // 중단3
+  { x: -35, y: 115, rotation: -35 }, // 상단1
+  { x: 35, y: 110, rotation: 50 }, // 상단2
+];
 
 export default function PopcornScreen() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -30,39 +40,21 @@ export default function PopcornScreen() {
   const { lastUpdated, lastSaved } = useRecord();
   const [apiRecordCount, setApiRecordCount] = useState(null);
 
-  // 팝콘통 위에 9개 고정 배치
-  const POPCORN_POSITIONS = [
-    { x: -100, y: 0, rotation: -10 }, // 하단1
-    { x: -40, y: -10, rotation: 5 }, // 하단2
-    { x: 40, y: -5, rotation: 15 }, // 하단3
-    { x: 100, y: 0, rotation: 15 }, // 하단4
-
-    { x: -80, y: 60, rotation: 10 }, // 중단1
-    { x: -10, y: 50, rotation: 50 }, // 중단2
-    { x: 70, y: 55, rotation: -5 }, // 중단3
-
-    { x: -35, y: 115, rotation: -35 }, // 상단1
-    { x: 35, y: 110, rotation: 50 }, // 상단2
-  ];
-
   const formatDate = (date) => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, "0");
     const d = String(date.getDate()).padStart(2, "0");
     return `${y}.${m}.${d}`;
   };
+
   useFocusEffect(
     useCallback(() => {
       const fetchCount = async () => {
         try {
-          const token = await AsyncStorage.getItem("accessToken");
-          console.log("토큰:", token);
           const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
           const data = await getRecords(0, 100, dateStr);
-          console.log("팝콘 API 결과:", data);
           setApiRecordCount(data.totalElements);
         } catch (e) {
-          console.log("팝콘 API 실패:", e.message);
           setApiRecordCount(null);
         }
       };
@@ -70,7 +62,6 @@ export default function PopcornScreen() {
     }, [currentDate, lastUpdated, lastSaved]),
   );
 
-  const todayStr = formatDate(currentDate);
   const todayCount = apiRecordCount !== null ? apiRecordCount : 0;
 
   const popcornPieces = useMemo(
@@ -98,9 +89,6 @@ export default function PopcornScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.inner}>
-        {/* 타이틀 */}
-        {/* <Text style={styles.title}>팝콘 수집기</Text> */}
-
         {/* 닉네임 배너 */}
         <View style={styles.nicknameBanner}>
           <Text style={styles.nicknameText}>{nickname}의 팝콘통</Text>
@@ -131,6 +119,7 @@ export default function PopcornScreen() {
           }}
           onCancel={() => setDatePickerVisible(false)}
         />
+
         <View style={styles.cardShadow}>
           <View style={styles.card}>
             {/* 팝콘알 쌓기 */}
@@ -200,14 +189,14 @@ export default function PopcornScreen() {
         <TextMemoModal
           visible={textModalVisible}
           onClose={() => setTextModalVisible(false)}
-          onSave={(data) => console.log("저장된 데이터:", data)}
+          onSave={() => {}}
         />
 
         {/* 음성 모달 */}
         <VoiceMemoModal
           visible={voiceModalVisible}
           onClose={() => setVoiceModalVisible(false)}
-          onSave={(data) => console.log("저장된 데이터:", data)}
+          onSave={() => {}}
         />
       </View>
     </SafeAreaView>
@@ -224,27 +213,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
-  title: {
-    ...typography.h1,
-    color: colors.textPrimary,
-    textAlign: "center",
-    marginBottom: spacing.md,
-  },
   nicknameBanner: {
     backgroundColor: "#FFF9E6",
     borderRadius: 99,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     alignSelf: "center",
-    borderColor: colors.primary,
-    //borderWidth: 2,
     marginBottom: 20,
   },
   nicknameText: {
     ...typography.h1,
     color: colors.primary,
-    // fontSize: 14,
-    // fontFamily: "Pretendard-SemiBold",
     textAlign: "center",
   },
   dateRow: {
@@ -252,16 +231,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.lg,
-    gap: 40, // < > 간격
-  },
-  arrow: {
-    fontSize: 20,
-    color: colors.textSecondary,
+    gap: 40,
   },
   date: {
     ...typography.h2,
     color: colors.textPrimary,
-    width: 130, // 날짜 텍스트 영역을 고정 너비 - 텍스트 박스 크기가 변하지 않도록
+    width: 130,
     textAlign: "center",
   },
   cardShadow: {
@@ -270,20 +245,12 @@ const styles = StyleSheet.create({
     ...preset.card,
   },
   card: {
-    //backgroundColor: colors.surface,
     borderRadius: 16,
     padding: spacing.xl,
     alignItems: "center",
     justifyContent: "center",
     height: 320,
     overflow: "hidden",
-  },
-  popcornPlaceholder: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  placeholderText: {
-    fontSize: 80,
   },
   button: {
     flexDirection: "row",
@@ -307,11 +274,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   buttonText: {
-    //...typography.body,
     fontSize: 18,
     fontFamily: "Pretendard-SemiBold",
     color: "#FFFFFF",
     flex: 1,
-    numberOfLines: 2,
   },
 });

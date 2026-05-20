@@ -19,11 +19,10 @@ export default function SignupScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
-  const [isEmailSent, setIsEmailSent] = useState(false); //deflut = false, 인증번호란 확인용
+  const [isEmailSent, setIsEmailSent] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 이메일 인증번호 발송
   const handleSendEmail = async () => {
     if (!email.trim()) {
       Alert.alert("", "이메일을 입력해주세요.");
@@ -31,19 +30,16 @@ export default function SignupScreen({ navigation }) {
     }
     try {
       setLoading(true);
-      const result = await sendVerificationEmail(email);
-      console.log("발송 결과:", result);
+      await sendVerificationEmail(email);
       setIsEmailSent(true);
       Alert.alert("", "인증번호가 발송되었어요.");
     } catch (e) {
-      console.log("에러:", e.response?.data, e.message);
       Alert.alert("", "이메일 발송에 실패했어요.");
     } finally {
       setLoading(false);
     }
   };
 
-  // 이메일 인증번호 확인
   const handleVerifyEmail = async () => {
     if (!code.trim()) {
       Alert.alert("", "인증번호를 입력해주세요.");
@@ -61,7 +57,6 @@ export default function SignupScreen({ navigation }) {
     }
   };
 
-  // 회원가입
   const handleSignup = async () => {
     if (!nickname.trim() || !email.trim() || !password.trim()) {
       Alert.alert("", "모든 항목을 입력해주세요.");
@@ -78,7 +73,6 @@ export default function SignupScreen({ navigation }) {
         { text: "확인", onPress: () => navigation.navigate("Login") },
       ]);
     } catch (e) {
-      console.log("회원가입 에러:", e.response?.data, e.message);
       const errorMessage =
         e.response?.data?.message || "회원가입에 실패했어요.";
       Alert.alert("", errorMessage);
@@ -177,7 +171,6 @@ export default function SignupScreen({ navigation }) {
               secureTextEntry
             />
 
-            {/* 회원가입 버튼 */}
             <TouchableOpacity
               style={styles.signupButton}
               onPress={handleSignup}
@@ -188,7 +181,6 @@ export default function SignupScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
 
-            {/* 로그인으로 이동 */}
             <TouchableOpacity
               style={styles.loginButton}
               onPress={() => navigation.navigate("Login")}
@@ -211,7 +203,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xl,
-    //justifyContent: "center",
   },
   title: {
     ...typography.h1,

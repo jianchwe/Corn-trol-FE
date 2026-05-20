@@ -17,7 +17,6 @@ import { Play, Pause } from "phosphor-react-native";
 import * as Notifications from "expo-notifications";
 import { colors, typography, spacing, preset } from "../theme";
 import { useUser } from "../context/UserContext";
-
 import {
   startFocus,
   endFocus,
@@ -34,7 +33,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// 타이머 크기
 const CIRCLE_SIZE = 320;
 const RADIUS = 140;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -45,8 +43,8 @@ export default function FocusModeScreen() {
   const [isRunning, setIsRunning] = useState(false);
   const [isTimeModalVisible, setTimeModalVisible] = useState(false);
   const [inputMinutes, setInputMinutes] = useState("");
-  const [selectedRecord, setSelectedRecord] = useState(null); // 선택된 기록
-  const [recordModalVisible, setRecordModalVisible] = useState(false); // 기록 선택 모달
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [recordModalVisible, setRecordModalVisible] = useState(false);
 
   const intervalRef = useRef(null);
   const endTimeRef = useRef(null);
@@ -61,7 +59,6 @@ export default function FocusModeScreen() {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
 
-  // 알림 권한 요청
   useEffect(() => {
     async function requestPermissions() {
       await Notifications.requestPermissionsAsync();
@@ -72,7 +69,6 @@ export default function FocusModeScreen() {
   // 앱 포그라운드/백그라운드 감지
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
-      // 백그라운드로 내려갈 때 — 타이머 실행 중이면 알림 발송
       if (
         appState.current === "active" &&
         nextAppState.match(/inactive|background/) &&
@@ -88,7 +84,6 @@ export default function FocusModeScreen() {
         });
       }
 
-      // 포그라운드로 돌아왔을 때 남은 시간 계산
       if (
         appState.current.match(/inactive|background/) &&
         nextAppState === "active"
@@ -123,7 +118,7 @@ export default function FocusModeScreen() {
             setIsRunning(false);
             setTotalSeconds(0);
             endTimeRef.current = null;
-            setTimerCompleted(true); // incrementFocusCount 대신
+            setTimerCompleted(true);
             if (appState.current === "active") {
               Alert.alert("알곡 식히기 완료 🌽", "설정한 시간이 종료됐어요!");
             }
@@ -142,7 +137,7 @@ export default function FocusModeScreen() {
     if (timerCompleted) {
       incrementFocusCount();
       if (sessionId) {
-        endFocus(sessionId).catch(() => console.log("집중 모드 종료 API 실패"));
+        endFocus(sessionId).catch(() => {});
         setSessionId(null);
       }
       setSelectedRecord(null);
@@ -154,7 +149,6 @@ export default function FocusModeScreen() {
     }
   }, [timerCompleted]);
 
-  // 푸시 알림 예약
   const scheduleNotification = async (seconds) => {
     await Notifications.cancelAllScheduledNotificationsAsync();
     await Notifications.scheduleNotificationAsync({
@@ -170,7 +164,6 @@ export default function FocusModeScreen() {
     });
   };
 
-  // 푸시 알림 취소
   const cancelNotification = async () => {
     await Notifications.cancelAllScheduledNotificationsAsync();
   };
@@ -188,16 +181,12 @@ export default function FocusModeScreen() {
       endTimeRef.current = Date.now() + remainSeconds * 1000;
       try {
         await scheduleNotification(remainSeconds);
-      } catch (e) {
-        console.log("알림 예약 실패:", e);
-      }
+      } catch (e) {}
       setRemainSeconds((prev) => prev - 1);
     } else {
       try {
         await cancelNotification();
-      } catch (e) {
-        console.log("알림 취소 실패:", e);
-      }
+      } catch (e) {}
       endTimeRef.current = null;
     }
     setIsRunning((prev) => !prev);
@@ -215,18 +204,52 @@ export default function FocusModeScreen() {
     setTimeModalVisible(false);
     setInputMinutes("");
 
-    // 알곡 식히기 시작 API
     try {
       const id = await startFocus(selectedRecord?.id, minutes);
       setSessionId(id);
-    } catch (e) {
-      console.log("알곡 식히기 시작 API 실패");
-    }
+    } catch (e) {}
   };
+
   const formatTime = (seconds) => {
     const m = String(Math.floor(seconds / 60)).padStart(2, "0");
     const s = String(seconds % 60).padStart(2, "0");
     return `${m}:${s}`;
+  };
+
+  const handleSelectRecord = async (item) => {
+    if (selectedRecord?.id === item.id) {
+      setSelectedRecord(null);
+      setQuestions([]);
+    } else {
+      setSelectedRecord(item);
+      setIsLoadingQuestions(true);
+      setRecordModalVisible(false);
+
+      try {
+        await requestQuestions(item.id, item.mainTopic || "");
+        const q = await getQuestions(item.id);
+        setQuestions(q);
+        setQuestionIndex(0);
+      } catch (e) {
+        try {
+          const existing = await getQuestions(item.id);
+          if (existing.length > 0) {
+            setQuestions(existing);
+            setQuestionIndex(0);
+          } else {
+            try {
+              await requestQuestions(item.id, item.mainTopic || "");
+              const newQ = await getQuestions(item.id);
+              setQuestions(newQ);
+              setQuestionIndex(0);
+            } catch (e2) {}
+          }
+        } catch (e3) {}
+      } finally {
+        setIsLoadingQuestions(false);
+      }
+    }
+    setRecordModalVisible(false);
   };
 
   const progress = totalSeconds > 0 ? remainSeconds / totalSeconds : 0;
@@ -289,7 +312,6 @@ export default function FocusModeScreen() {
         {/* 원형 타이머 */}
         <View style={styles.timerContainer}>
           <Svg width={CIRCLE_SIZE} height={CIRCLE_SIZE}>
-            {/* 배경 원 */}
             <Circle
               cx={CIRCLE_SIZE / 2}
               cy={CIRCLE_SIZE / 2}
@@ -298,7 +320,7 @@ export default function FocusModeScreen() {
               strokeWidth={14}
               fill="none"
             />
-            {/* 프로그레스 원 — 위쪽에서 반시계 방향 */}
+            {/* 타이머 — 위쪽에서 반시계 방향 */}
             <Circle
               cx={CIRCLE_SIZE / 2}
               cy={CIRCLE_SIZE / 2}
@@ -358,64 +380,7 @@ export default function FocusModeScreen() {
                       selectedRecord?.id === item.id &&
                         styles.recordItemSelected,
                     ]}
-                    onPress={async () => {
-                      if (selectedRecord?.id === item.id) {
-                        setSelectedRecord(null);
-                        setQuestions([]);
-                      } else {
-                        setSelectedRecord(item);
-                        setIsLoadingQuestions(true);
-                        setRecordModalVisible(false);
-
-                        try {
-                          // 1차 생성 요청
-                          await requestQuestions(item.id, item.mainTopic || "");
-                          const q = await getQuestions(item.id);
-                          console.log("1차 질문 생성 성공:", JSON.stringify(q));
-                          setQuestions(q);
-                          setQuestionIndex(0);
-                        } catch (e) {
-                          console.log(
-                            "1차 질문 생성 실패, 기존 질문 조회:",
-                            e.message,
-                          );
-                          try {
-                            // 기존 질문 조회
-                            const existing = await getQuestions(item.id);
-                            console.log(
-                              "기존 질문 조회 성공:",
-                              JSON.stringify(existing),
-                            );
-                            if (existing.length > 0) {
-                              setQuestions(existing);
-                              setQuestionIndex(0);
-                            } else {
-                              // 2차 생성 요청
-                              try {
-                                await requestQuestions(
-                                  item.id,
-                                  item.mainTopic || "",
-                                );
-                                const newQ = await getQuestions(item.id);
-                                console.log(
-                                  "2차 질문 생성 성공:",
-                                  JSON.stringify(newQ),
-                                );
-                                setQuestions(newQ);
-                                setQuestionIndex(0);
-                              } catch (e2) {
-                                console.log("2차 질문 생성 실패:", e2.message);
-                              }
-                            }
-                          } catch (e3) {
-                            console.log("기존 질문 조회 실패:", e3.message);
-                          }
-                        } finally {
-                          setIsLoadingQuestions(false);
-                        }
-                      }
-                      setRecordModalVisible(false);
-                    }}
+                    onPress={() => handleSelectRecord(item)}
                   >
                     <Text style={styles.recordItemText} numberOfLines={2}>
                       {item.content}
@@ -469,7 +434,6 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h1,
-    color: colors.textPrimary,
     marginBottom: spacing.xl,
     color: colors.primary,
   },
@@ -483,7 +447,6 @@ const styles = StyleSheet.create({
     ...preset.card,
     borderColor: colors.primary,
     borderWidth: 1.5,
-    //height: 120, // 고정 높이
     justifyContent: "center",
   },
   questionText: {
@@ -570,7 +533,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    //height: 120, // 고정 높이
     justifyContent: "center",
   },
   selectText: {

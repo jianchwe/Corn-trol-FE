@@ -8,7 +8,6 @@ export function UserProvider({ children }) {
   const [profileEmoji, setProfileEmoji] = useState("🌱");
   const [focusCount, setFocusCount] = useState(0);
 
-  // 이모지 불러오기
   useEffect(() => {
     const loadEmoji = async () => {
       const saved = await AsyncStorage.getItem("profileEmoji");
@@ -17,7 +16,6 @@ export function UserProvider({ children }) {
     loadEmoji();
   }, []);
 
-  // 이모지 저장
   const handleSetProfileEmoji = (emoji) => {
     setProfileEmoji(emoji);
     AsyncStorage.setItem("profileEmoji", emoji);
