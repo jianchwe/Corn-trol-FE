@@ -32,6 +32,7 @@ import {
   searchRecords,
   getMindMap,
 } from "../api/records";
+import { recommendConnection, createConnection } from "../api/connection";
 
 export default function AlgokScreen() {
   const [activeTab, setActiveTab] = useState("latest");
@@ -285,6 +286,34 @@ export default function AlgokScreen() {
                         try {
                           await requestAnalysis(id);
                           console.log("재분석 요청 성공");
+                          try {
+                            const recommendResult =
+                              await recommendConnection(id);
+                            console.log(
+                              "연결 추천 요청 성공:",
+                              JSON.stringify(recommendResult),
+                            );
+                            if (
+                              recommendResult?.sourceRecordId &&
+                              recommendResult?.targetRecordId
+                            ) {
+                              try {
+                                await createConnection(
+                                  recommendResult.sourceRecordId,
+                                  recommendResult.targetRecordId,
+                                );
+                                console.log("연결 생성 성공");
+                              } catch (e) {
+                                console.log("연결 생성 실패:", e.message);
+                              }
+                            }
+                          } catch (e) {
+                            console.log(
+                              "연결 추천 요청 실패:",
+                              e.response?.data,
+                              e.message,
+                            );
+                          }
                         } catch (e) {
                           console.log("재분석 요청 실패");
                         }
@@ -364,6 +393,34 @@ export default function AlgokScreen() {
                         try {
                           await requestAnalysis(id);
                           console.log("재분석 요청 성공");
+                          try {
+                            const recommendResult =
+                              await recommendConnection(id);
+                            console.log(
+                              "연결 추천 요청 성공:",
+                              JSON.stringify(recommendResult),
+                            );
+                            if (
+                              recommendResult?.sourceRecordId &&
+                              recommendResult?.targetRecordId
+                            ) {
+                              try {
+                                await createConnection(
+                                  recommendResult.sourceRecordId,
+                                  recommendResult.targetRecordId,
+                                );
+                                console.log("연결 생성 성공");
+                              } catch (e) {
+                                console.log("연결 생성 실패:", e.message);
+                              }
+                            }
+                          } catch (e) {
+                            console.log(
+                              "연결 추천 요청 실패:",
+                              e.response?.data,
+                              e.message,
+                            );
+                          }
                         } catch (e) {
                           console.log("재분석 요청 실패");
                         }
@@ -410,6 +467,34 @@ export default function AlgokScreen() {
                       try {
                         await requestAnalysis(editingId);
                         console.log("재분석 요청 성공");
+                        try {
+                          const recommendResult =
+                            await recommendConnection(editingId);
+                          console.log(
+                            "연결 추천 요청 성공:",
+                            JSON.stringify(recommendResult),
+                          );
+                          if (
+                            recommendResult?.sourceRecordId &&
+                            recommendResult?.targetRecordId
+                          ) {
+                            try {
+                              await createConnection(
+                                recommendResult.sourceRecordId,
+                                recommendResult.targetRecordId,
+                              );
+                              console.log("연결 생성 성공");
+                            } catch (e) {
+                              console.log("연결 생성 실패:", e.message);
+                            }
+                          }
+                        } catch (e) {
+                          console.log(
+                            "연결 추천 요청 실패:",
+                            e.response?.data,
+                            e.message,
+                          );
+                        }
                       } catch (e) {
                         console.log("재분석 요청 실패");
                       }
@@ -432,6 +517,44 @@ export default function AlgokScreen() {
                       }
                     } catch (e) {
                       console.log("기록 목록 로드 실패");
+                    }
+                    try {
+                      const mindmap = await getMindMap();
+                      console.log("마인드맵 결과:", JSON.stringify(mindmap));
+                      if (mindmap?.nodes?.length > 0) {
+                        const latestRecords = await getRecords();
+                        const grouped = mindmap.nodes.reduce((acc, node) => {
+                          if (!node.keyword) return acc;
+                          const record = latestRecords?.content?.find(
+                            (r) => r.recordId === node.recordId,
+                          );
+                          const existing = acc.find(
+                            (g) => g.keyword === node.keyword,
+                          );
+                          if (existing) {
+                            existing.records.push({
+                              id: node.recordId,
+                              content: record?.content || "",
+                            });
+                          } else {
+                            acc.push({
+                              keyword: node.keyword,
+                              records: [
+                                {
+                                  id: node.recordId,
+                                  content: record?.content || "",
+                                },
+                              ],
+                            });
+                          }
+                          return acc;
+                        }, []);
+                        setMindMapData(grouped);
+                        setMindMapKeywords(grouped.map((g) => g.keyword));
+                        setMindMapLinks(mindmap.links || []);
+                      }
+                    } catch (e) {
+                      console.log("마인드맵 로드 실패");
                     }
                   }}
                 >

@@ -204,7 +204,8 @@ export default function VoiceMemoModal({ visible, onClose, onSave }) {
         console.log("음성 저장 성공:", recordId);
         try {
           const analysisResult = await requestAnalysis(recordId);
-          console.log("분석 성공:", JSON.stringify(analysisResult));
+          //console.log("분석 성공:", JSON.stringify(analysisResult));
+          console.log("분석 성공:");
         } catch (e) {
           console.log("분석 실패:", e.message);
         }
