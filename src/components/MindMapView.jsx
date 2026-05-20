@@ -99,7 +99,7 @@ export default function MindMapView({
           },
         ]}
       >
-        <Text style={styles.centerText}>{keyword}</Text>
+        <Text style={styles.centerText}>{keyword?.replace(" & ", "\n& ")}</Text>
       </View>
 
       {/* 자식 노드 */}
