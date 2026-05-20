@@ -91,12 +91,17 @@ export default function AlgokScreen() {
                 existing.records.push({
                   id: node.recordId,
                   content: record?.content || "",
+                  date: record?.createdAt || "",
                 });
               } else {
                 acc.push({
                   keyword: node.keyword,
                   records: [
-                    { id: node.recordId, content: record?.content || "" },
+                    {
+                      id: node.recordId,
+                      content: record?.content || "",
+                      date: record?.createdAt || "",
+                    },
                   ],
                 });
               }
@@ -535,6 +540,7 @@ export default function AlgokScreen() {
                             existing.records.push({
                               id: node.recordId,
                               content: record?.content || "",
+                              date: record?.createdAt || "",
                             });
                           } else {
                             acc.push({
@@ -543,6 +549,7 @@ export default function AlgokScreen() {
                                 {
                                   id: node.recordId,
                                   content: record?.content || "",
+                                  date: record?.createdAt || "",
                                 },
                               ],
                             });

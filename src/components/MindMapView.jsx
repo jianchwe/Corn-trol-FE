@@ -130,7 +130,7 @@ export default function MindMapView({
           onPress={() => setSelectedRecord(null)}
           activeOpacity={1}
         >
-          <TouchableOpacity activeOpacity={1}>
+          <TouchableOpacity activeOpacity={1} style={{ width: "80%" }}>
             <View style={styles.modalBox}>
               <TouchableOpacity
                 style={styles.modalCloseX}
@@ -140,23 +140,21 @@ export default function MindMapView({
                 <X size={16} color={colors.textSecondary} weight="bold" />
               </TouchableOpacity>
               {selectedRecord?.date && (
-                <Text style={styles.modalDate}>{selectedRecord.date}</Text>
+                <Text style={styles.modalDate}>
+                  {new Date(selectedRecord.date)
+                    .toLocaleDateString("ko-KR", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                    })
+                    .replace(/\. /g, ".")
+                    .replace(/\.$/, "")}
+                </Text>
               )}
               <Text style={styles.modalContent}>{selectedRecord?.content}</Text>
               <View style={styles.modalButtons}>
                 <TouchableOpacity
-                  style={styles.modalEditButton}
-                  onPress={() => {
-                    selectedRecordRef.current = selectedRecord;
-                    setEditContent(selectedRecord.content);
-                    setEditModalVisible(true);
-                    setSelectedRecord(null);
-                  }}
-                >
-                  <Text style={styles.modalEditText}>수정</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.modalDeleteButton}
+                  //style={styles.modalDeleteButton}
                   onPress={() => {
                     Alert.alert("", "이 기록을 삭제할까요?", [
                       {
@@ -173,6 +171,17 @@ export default function MindMapView({
                 >
                   <Text style={styles.modalDeleteText}>삭제</Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  //style={styles.modalEditButton}
+                  onPress={() => {
+                    selectedRecordRef.current = selectedRecord;
+                    setEditContent(selectedRecord.content);
+                    setEditModalVisible(true);
+                    setSelectedRecord(null);
+                  }}
+                >
+                  <Text style={styles.modalEditText}>수정</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </TouchableOpacity>
@@ -186,33 +195,36 @@ export default function MindMapView({
           style={{ flex: 1 }}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalBox}>
-              <Text style={styles.modalEditTitle}>기록 수정</Text>
-              <TextInput
-                style={styles.modalInput}
-                value={editContent}
-                onChangeText={setEditContent}
-                multiline
-                autoFocus
-              />
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={styles.modalEditButton}
-                  onPress={() => setEditModalVisible(false)}
-                >
-                  <Text style={styles.modalCancelText}>취소</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.modalDeleteButton}
-                  onPress={() => {
-                    onEdit && onEdit(selectedRecordRef.current.id, editContent);
-                    setEditModalVisible(false);
-                  }}
-                >
-                  <Text style={styles.modalSaveText}>저장</Text>
-                </TouchableOpacity>
+            <TouchableOpacity activeOpacity={1} style={{ width: "80%" }}>
+              <View style={styles.modalEditBox}>
+                <Text style={styles.modalEditTitle}>기록 수정</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={editContent}
+                  onChangeText={setEditContent}
+                  multiline
+                  autoFocus
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.modalEditButton}
+                    onPress={() => setEditModalVisible(false)}
+                  >
+                    <Text style={styles.modalCancelText}>취소</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.modalDeleteButton}
+                    onPress={() => {
+                      onEdit &&
+                        onEdit(selectedRecordRef.current.id, editContent);
+                      setEditModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.modalSaveText}>저장</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -264,19 +276,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 26,
     padding: spacing.lg,
-    width: "80%",
+    paddingTop: spacing.xl,
+  },
+  modalEditBox: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 26,
+    padding: spacing.lg,
+    marginTop: 180,
   },
   modalContent: {
     ...typography.body,
     color: colors.textPrimary,
-    marginBottom: spacing.lg,
+    paddingHorizontal: 12,
+    marginBottom: spacing.xl,
     lineHeight: 24,
   },
   modalCloseX: {
     position: "absolute",
-    top: spacing.md,
-    right: spacing.md,
-    padding: spacing.xs,
+    top: 10,
+    right: 10,
+    padding: spacing.md,
   },
   modalCloseXText: {
     fontSize: 16,
@@ -285,15 +304,17 @@ const styles = StyleSheet.create({
   modalDate: {
     ...typography.small,
     color: colors.textSecondary,
+    paddingHorizontal: 12,
     marginBottom: spacing.md,
   },
   modalButtons: {
     flexDirection: "row",
-    gap: spacing.sm,
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
   },
   modalEditButton: {
-    flex: 1,
-    borderRadius: 12,
+    // flex: 1,
+    // borderRadius: 12,
     paddingVertical: spacing.sm,
     alignItems: "center",
   },
@@ -301,17 +322,19 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.primary,
     fontFamily: "Pretendard-SemiBold",
+    marginBottom: 5,
   },
   modalDeleteButton: {
-    flex: 1,
-    borderRadius: 12,
+    // flex: 1,
+    // borderRadius: 12,
     paddingVertical: spacing.sm,
     alignItems: "center",
   },
   modalDeleteText: {
     ...typography.body,
-    color: "#FF5252",
-    fontFamily: "Pretendard-SemiBold",
+    color: colors.textSecondary,
+    //color: "#FF5252",
+    marginBottom: 5,
   },
   modalEditTitle: {
     ...typography.h2,
@@ -327,13 +350,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.md,
     height: 120,
-
     textAlignVertical: "top",
   },
   modalCancelText: {
     ...typography.body,
     color: colors.textSecondary,
-    fontFamily: "Pretendard-SemiBold",
   },
   modalSaveText: {
     ...typography.body,
